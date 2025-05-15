@@ -1,20 +1,22 @@
-import { createClient } from "@supabase/supabase-js"
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 import type { Database } from "./database.types"
 
-// Create a single supabase client for interacting with your database
-const createSupabaseClient = () => {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
+// Create a singleton instance to prevent multiple instances
+let supabaseClient: ReturnType<typeof createClientComponentClient<Database>> | null = null
 
-  return createClient<Database>(supabaseUrl, supabaseAnonKey)
-}
-
-// Client-side singleton to avoid creating multiple instances
-let supabaseClient: ReturnType<typeof createSupabaseClient> | null = null
-
-export const getSupabaseClient = () => {
+export function getSupabaseClient() {
   if (!supabaseClient) {
-    supabaseClient = createSupabaseClient()
+    supabaseClient = createClientComponentClient<Database>({
+      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+      supabaseKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      options: {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true,
+        },
+      },
+    })
   }
   return supabaseClient
 }

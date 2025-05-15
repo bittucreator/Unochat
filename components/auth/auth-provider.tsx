@@ -1,11 +1,11 @@
 "use client"
 
 import type React from "react"
-
 import { createContext, useContext, useEffect, useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import type { Session, User } from "@supabase/supabase-js"
 import { getSupabaseClient } from "@/lib/supabase/client"
+import { useToast } from "@/hooks/use-toast"
 
 type AuthContextType = {
   user: User | null
@@ -17,7 +17,8 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-const publicRoutes = ["/", "/login", "/pricing", "/documentation"]
+// Routes that don't require authentication
+const publicRoutes = ["/", "/login", "/pricing", "/documentation", "/terms", "/privacy"]
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
@@ -26,40 +27,85 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
   const supabase = getSupabaseClient()
+  const { toast } = useToast()
 
+  // Function to check if current route is public
+  const isPublicRoute = (path: string) => {
+    return publicRoutes.some((route) => {
+      if (route === "/") return path === "/"
+      return path.startsWith(route)
+    })
+  }
+
+  // Initialize auth state and set up listener
   useEffect(() => {
-    const fetchSession = async () => {
-      const {
-        data: { session },
-        error,
-      } = await supabase.auth.getSession()
+    const initializeAuth = async () => {
+      setIsLoading(true)
 
-      if (error) {
-        console.error("Error fetching session:", error)
-      }
+      try {
+        // Get initial session
+        const {
+          data: { session },
+          error,
+        } = await supabase.auth.getSession()
 
-      setSession(session)
-      setUser(session?.user || null)
-      setIsLoading(false)
+        if (error) {
+          console.error("Error getting session:", error)
+          throw error
+        }
 
-      // If user is logged in and on public routes (except homepage), redirect to dashboard
-      if (session?.user && pathname !== "/" && publicRoutes.includes(pathname)) {
-        router.push("/dashboard")
+        setSession(session)
+        setUser(session?.user || null)
+
+        // If user is logged in and on a public route (except homepage), redirect to dashboard
+        if (session?.user && pathname !== "/" && isPublicRoute(pathname)) {
+          router.push("/dashboard")
+        }
+
+        // If user is not logged in and on a protected route, redirect to login
+        if (!session?.user && !isPublicRoute(pathname)) {
+          router.push(`/login?redirectTo=${encodeURIComponent(pathname)}`)
+        }
+      } catch (error) {
+        console.error("Auth initialization error:", error)
+        // Clear potentially corrupted session data
+        supabase.auth.signOut().catch((e) => console.error("Error signing out:", e))
+      } finally {
+        setIsLoading(false)
       }
     }
 
-    fetchSession()
+    initializeAuth()
 
+    // Set up auth state change listener
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("Auth state changed:", event)
+
       setSession(session)
       setUser(session?.user || null)
-      setIsLoading(false)
 
-      // If user just logged in and is on a public route, redirect to dashboard
-      if (session?.user && publicRoutes.includes(pathname)) {
-        router.push("/dashboard")
+      if (event === "SIGNED_IN") {
+        // User just signed in, redirect to dashboard if on public route
+        if (isPublicRoute(pathname)) {
+          router.push("/dashboard")
+        }
+        toast({
+          title: "Signed in successfully",
+          description: `Welcome${session?.user?.user_metadata?.full_name ? `, ${session.user.user_metadata.full_name.split(" ")[0]}` : ""}!`,
+        })
+      } else if (event === "SIGNED_OUT") {
+        // User just signed out, redirect to home
+        router.push("/")
+        toast({
+          title: "Signed out successfully",
+          description: "You have been signed out of your account.",
+        })
+      } else if (event === "TOKEN_REFRESHED") {
+        console.log("Token refreshed successfully")
+      } else if (event === "USER_UPDATED") {
+        console.log("User updated")
       }
 
       router.refresh()
@@ -68,7 +114,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       subscription.unsubscribe()
     }
-  }, [supabase, router, pathname])
+  }, [supabase, router, pathname, toast])
 
   const signInWithGoogle = async () => {
     try {
@@ -88,6 +134,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error) {
       console.error("Error signing in with Google:", error)
+      toast({
+        variant: "destructive",
+        title: "Authentication Error",
+        description: "Failed to sign in with Google. Please try again.",
+      })
       throw error
     }
   }
@@ -99,11 +150,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) {
         throw error
       }
-
-      router.push("/")
-      router.refresh()
     } catch (error) {
       console.error("Error signing out:", error)
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to sign out. Please try again.",
+      })
       throw error
     }
   }
