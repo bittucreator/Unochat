@@ -9,7 +9,9 @@ export async function getAuthorizationUrl() {
   // Store state in session for verification when the user returns
   // This would typically be stored in a database or session
 
-  const authUrl = `https://www.figma.com/oauth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=file_read file_write&state=${state}&response_type=code`
+  // Updated scopes to use the correct Figma OAuth scopes
+  // Changed from 'file_read file_write' to 'files:read files:write'
+  const authUrl = `https://www.figma.com/oauth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=files:read%20files:write&state=${state}&response_type=code`
 
   return { authUrl, state }
 }

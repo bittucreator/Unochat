@@ -33,13 +33,24 @@ export function FigmaCustomizationPanel({ authState = defaultAuthState }: { auth
     try {
       setIsAuthenticating(true)
       const { authUrl } = await startFigmaAuth()
-      window.location.href = authUrl
+
+      // Show a toast with instructions before redirecting
+      toast({
+        title: "Connecting to Figma",
+        description: "You'll be redirected to Figma to authorize access. Please grant all requested permissions.",
+        duration: 5000,
+      })
+
+      // Short delay to allow the toast to be seen
+      setTimeout(() => {
+        window.location.href = authUrl
+      }, 1000)
     } catch (error) {
       console.error("Error starting Figma auth:", error)
       toast({
         variant: "destructive",
         title: "Authentication Error",
-        description: "Failed to start Figma authentication. Please try again.",
+        description: `Failed to start Figma authentication: ${(error as Error).message || "Unknown error"}. Please try again.`,
       })
     } finally {
       setIsAuthenticating(false)
@@ -102,6 +113,9 @@ export function FigmaCustomizationPanel({ authState = defaultAuthState }: { auth
                 <LogIn className="h-4 w-4 mr-2" />
                 {isAuthenticating ? "Connecting..." : "Connect to Figma"}
               </Button>
+              <p className="text-xs text-muted-foreground mt-2">
+                Note: You'll need to grant both read and write permissions to allow TooliQ to create Figma files.
+              </p>
             </div>
           )}
         </div>
