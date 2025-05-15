@@ -1,7 +1,7 @@
 import type React from "react"
 import { createServerSupabaseClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
-import { AppLayout } from "@/components/dashboard/app-layout"
+import { AppSidebarLayout } from "@/components/dashboard/app-sidebar-layout"
 
 export default async function NextJsGeneratorLayout({
   children,
@@ -25,5 +25,5 @@ export default async function NextJsGeneratorLayout({
     redirect("/login?redirectTo=/nextjs-generator")
   }
 
-  return <AppLayout>{children}</AppLayout>
+  return <AppSidebarLayout>{children}</AppSidebarLayout>
 }
