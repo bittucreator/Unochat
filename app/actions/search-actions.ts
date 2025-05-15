@@ -1,20 +1,18 @@
-import type React from "react"
-;("use server")
+"use server"
 
 import { createServerActionClient } from "@supabase/auth-helpers-nextjs"
 import { cookies } from "next/headers"
 import type { Database } from "@/lib/supabase/database.types"
 
-type SearchResult = {
+export type SearchResult = {
   id: string
   title: string
   description?: string
   url: string
   category: "conversions" | "templates" | "settings" | "documentation" | "profile"
-  icon?: React.ReactNode
 }
 
-export async function searchContent(query: string, signal?: AbortSignal): Promise<SearchResult[]> {
+export async function searchContent(query: string): Promise<SearchResult[]> {
   if (!query.trim()) return []
 
   const supabase = createServerActionClient<Database>({ cookies })

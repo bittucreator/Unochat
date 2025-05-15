@@ -1,23 +1,13 @@
 "use client"
 
-import type React from "react"
-
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Command } from "cmdk"
 import { SearchIcon, FileCode, History, Settings, User, CreditCard, X, Loader2 } from "lucide-react"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { useSearch } from "./search-provider"
-import { searchContent } from "@/app/actions/search-actions"
-
-type SearchResult = {
-  id: string
-  title: string
-  description?: string
-  url: string
-  category: "conversions" | "templates" | "settings" | "documentation" | "profile"
-  icon?: React.ReactNode
-}
+import { searchClient } from "./search-client"
+import type { SearchResult } from "@/app/actions/search-actions"
 
 export function SearchDialog() {
   const { isOpen, closeSearch } = useSearch()
@@ -42,7 +32,6 @@ export function SearchDialog() {
   // Handle search
   useEffect(() => {
     const controller = new AbortController()
-    const signal = controller.signal
 
     const performSearch = async () => {
       if (query.trim().length === 0) {
@@ -52,12 +41,10 @@ export function SearchDialog() {
 
       setIsLoading(true)
       try {
-        const searchResults = await searchContent(query, signal)
+        const searchResults = await searchClient(query)
         setResults(searchResults)
       } catch (error) {
-        if (!(error instanceof DOMException && error.name === "AbortError")) {
-          console.error("Search error:", error)
-        }
+        console.error("Search error:", error)
       } finally {
         setIsLoading(false)
       }
@@ -87,7 +74,7 @@ export function SearchDialog() {
           title: "Next.js Generator",
           description: "Generate Next.js code from websites",
           url: "/nextjs-generator",
-          category: "conversions",
+          category: "conversions" as const,
           icon: <FileCode className="h-4 w-4" />,
         },
         {
@@ -95,7 +82,7 @@ export function SearchDialog() {
           title: "Conversion History",
           description: "View your past conversions",
           url: "/dashboard/history",
-          category: "conversions",
+          category: "conversions" as const,
           icon: <History className="h-4 w-4" />,
         },
         {
@@ -103,7 +90,7 @@ export function SearchDialog() {
           title: "Settings",
           description: "Manage your account settings",
           url: "/settings",
-          category: "settings",
+          category: "settings" as const,
           icon: <Settings className="h-4 w-4" />,
         },
         {
@@ -111,7 +98,7 @@ export function SearchDialog() {
           title: "Profile",
           description: "View and edit your profile",
           url: "/profile",
-          category: "profile",
+          category: "profile" as const,
           icon: <User className="h-4 w-4" />,
         },
         {
@@ -119,7 +106,7 @@ export function SearchDialog() {
           title: "Billing",
           description: "Manage your subscription and billing",
           url: "/billing",
-          category: "settings",
+          category: "settings" as const,
           icon: <CreditCard className="h-4 w-4" />,
         },
       ],
