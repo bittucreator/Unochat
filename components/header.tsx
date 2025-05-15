@@ -42,27 +42,13 @@ export function Header() {
             >
               Documentation
             </Link>
-            {user && (
-              <>
-                <Link
-                  href="/dashboard"
-                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Dashboard
-                </Link>
-                <Link
-                  href="/settings"
-                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Settings
-                </Link>
-                <Link
-                  href="/billing"
-                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Billing
-                </Link>
-              </>
+            {!user && (
+              <Link
+                href="/login"
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Login
+              </Link>
             )}
           </nav>
         </div>
@@ -149,20 +135,6 @@ export function Header() {
                   onClick={() => setIsMenuOpen(false)}
                 >
                   Dashboard
-                </Link>
-                <Link
-                  href="/settings"
-                  className="text-foreground hover:text-primary"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Settings
-                </Link>
-                <Link
-                  href="/billing"
-                  className="text-foreground hover:text-primary"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Billing
                 </Link>
                 <button
                   className="text-foreground hover:text-primary text-left"

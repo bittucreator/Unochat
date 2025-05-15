@@ -83,11 +83,11 @@
 
 @layer components {
   .amie-card {
-    @apply bg-white dark:bg-card rounded-2xl border border-border shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden;
+    @apply bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden transition-all duration-200;
   }
 
   .amie-button {
-    @apply rounded-full font-medium transition-all duration-200;
+    @apply bg-primary hover:bg-primary/90 text-white rounded-full transition-all duration-200;
   }
 
   .amie-gradient-text {
@@ -96,5 +96,22 @@
 
   .amie-gradient-bg {
     @apply bg-gradient-to-r from-primary to-purple-500;
+  }
+
+  /* Sidebar styles */
+  [data-sidebar="sidebar"] {
+    @apply bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800;
+  }
+
+  [data-sidebar="menu-button"] {
+    @apply rounded-lg transition-all duration-200;
+  }
+
+  [data-sidebar="menu-button"][data-active="true"] {
+    @apply bg-primary/10 text-primary font-medium;
+  }
+
+  [data-sidebar="group-label"] {
+    @apply text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider;
   }
 }

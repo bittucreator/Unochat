@@ -1,5 +1,4 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server"
-import { redirect } from "next/navigation"
 import { RealTimeConversions } from "@/components/dashboard/real-time-conversions"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
@@ -8,14 +7,10 @@ import { Code, Figma, Clock, ArrowRight } from "lucide-react"
 export default async function DashboardPage() {
   const supabase = createServerSupabaseClient()
 
-  // Check if user is authenticated
+  // Fetch user's session
   const {
     data: { session },
   } = await supabase.auth.getSession()
-
-  if (!session) {
-    redirect("/login")
-  }
 
   // Fetch user's conversion history (most recent 5)
   const { data: recentConversions } = await supabase
@@ -25,12 +20,12 @@ export default async function DashboardPage() {
     .limit(5)
 
   // Get user's name
-  const firstName = session.user.user_metadata.full_name
+  const firstName = session?.user.user_metadata.full_name
     ? session.user.user_metadata.full_name.split(" ")[0]
-    : session.user.email?.split("@")[0] || "there"
+    : session?.user.email?.split("@")[0] || "there"
 
   return (
-    <div className="container mx-auto px-4 py-12">
+    <div className="p-6 md:p-8">
       <RealTimeConversions />
 
       {/* Welcome Section */}
