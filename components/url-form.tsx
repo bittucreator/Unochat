@@ -7,24 +7,17 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { LinkIcon, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import type { FigmaAuthState, WebsiteToFigmaConversion } from "@/lib/types/figma"
-import { convertWebsiteToFigma } from "@/app/actions/figma-actions"
+import type { FigmaAuthState } from "@/lib/types/figma"
 
 interface UrlFormProps {
   authState: FigmaAuthState
-  onConversionStart?: () => void
-  onConversionComplete?: (conversion: WebsiteToFigmaConversion) => void
+  onSubmit?: (url: string) => Promise<void>
+  isLoading?: boolean
   conversionType?: "figma" | "nextjs"
 }
 
-export function UrlForm({
-  authState,
-  onConversionStart,
-  onConversionComplete,
-  conversionType = "figma",
-}: UrlFormProps) {
+export function UrlForm({ authState, onSubmit, isLoading = false, conversionType = "figma" }: UrlFormProps) {
   const [url, setUrl] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -61,47 +54,9 @@ export function UrlForm({
       return
     }
 
-    setIsLoading(true)
-    onConversionStart?.()
-
-    try {
-      if (conversionType === "figma") {
-        // Convert website to Figma
-        const conversion = await convertWebsiteToFigma(url)
-
-        if (conversion.status === "completed") {
-          toast({
-            title: "Conversion Successful",
-            description: "Your website has been converted to a Figma design.",
-          })
-        } else {
-          toast({
-            variant: "destructive",
-            title: "Conversion Failed",
-            description: conversion.error || "Failed to convert website to Figma.",
-          })
-        }
-
-        onConversionComplete?.(conversion)
-      } else {
-        // Simulate Next.js conversion for now
-        setTimeout(() => {
-          setIsLoading(false)
-          toast({
-            title: "Website processed successfully!",
-            description: "Your Next.js code is ready to view and customize.",
-          })
-        }, 2000)
-      }
-    } catch (error) {
-      console.error("Error converting website:", error)
-      toast({
-        variant: "destructive",
-        title: "Conversion Error",
-        description: (error as Error).message || "An error occurred during conversion.",
-      })
-    } finally {
-      setIsLoading(false)
+    // Call the onSubmit handler if provided
+    if (onSubmit) {
+      await onSubmit(url)
     }
   }
 

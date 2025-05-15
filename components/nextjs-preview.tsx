@@ -4,11 +4,14 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
-import { AlertCircle, CopyIcon, DownloadIcon, FileIcon, FolderIcon } from "lucide-react"
+import { AlertCircle, CopyIcon, DownloadIcon, FileIcon, FolderIcon, Loader2 } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import type { WebsiteToNextjsConversion } from "@/lib/types/nextjs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tree, type TreeItem } from "@/components/ui/tree"
+import { generateZipFile } from "@/app/actions/download-actions"
+import { downloadBlob } from "@/lib/utils/zip-generator"
+import { useToast } from "@/hooks/use-toast"
 
 interface NextjsPreviewProps {
   conversion?: WebsiteToNextjsConversion
@@ -20,6 +23,8 @@ export function NextjsPreview({ conversion, selectedFile, onSelectFile }: Nextjs
   const [activeTab, setActiveTab] = useState("preview")
   const [fileTree, setFileTree] = useState<TreeItem[]>([])
   const [copySuccess, setCopySuccess] = useState<string | null>(null)
+  const [isDownloading, setIsDownloading] = useState(false)
+  const { toast } = useToast()
 
   // Generate file tree from conversion files
   useEffect(() => {
@@ -131,9 +136,49 @@ export function NextjsPreview({ conversion, selectedFile, onSelectFile }: Nextjs
   }
 
   // Download all files as zip
-  const downloadFiles = () => {
-    // In a real implementation, this would create a zip file with all the generated files
-    alert("This feature would download all generated files as a zip archive.")
+  const downloadFiles = async () => {
+    if (!conversion?.generatedFiles?.length) return
+
+    try {
+      setIsDownloading(true)
+
+      // Generate a project name from the URL
+      const urlObj = new URL(conversion.url)
+      const domain = urlObj.hostname.replace(/^www\./, "").replace(/\./g, "-")
+      const projectName = `${domain}-nextjs-project`
+
+      // Generate the ZIP file on the server
+      const result = await generateZipFile(conversion.generatedFiles, projectName)
+
+      if (result.success && result.base64) {
+        // Convert base64 to blob
+        const binaryString = atob(result.base64)
+        const bytes = new Uint8Array(binaryString.length)
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i)
+        }
+        const blob = new Blob([bytes], { type: "application/zip" })
+
+        // Download the blob
+        downloadBlob(blob, `${projectName}.zip`)
+
+        toast({
+          title: "Download successful",
+          description: "Your Next.js project has been downloaded as a ZIP file.",
+        })
+      } else {
+        throw new Error(result.error || "Failed to generate ZIP file")
+      }
+    } catch (error) {
+      console.error("Error downloading files:", error)
+      toast({
+        variant: "destructive",
+        title: "Download failed",
+        description: (error as Error).message || "Failed to download files. Please try again.",
+      })
+    } finally {
+      setIsDownloading(false)
+    }
   }
 
   return (
@@ -159,10 +204,19 @@ export function NextjsPreview({ conversion, selectedFile, onSelectFile }: Nextjs
             size="sm"
             className="gap-1"
             onClick={downloadFiles}
-            disabled={!conversion?.generatedFiles?.length}
+            disabled={!conversion?.generatedFiles?.length || isDownloading}
           >
-            <DownloadIcon className="h-4 w-4" />
-            Download
+            {isDownloading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Downloading...
+              </>
+            ) : (
+              <>
+                <DownloadIcon className="h-4 w-4" />
+                Download ZIP
+              </>
+            )}
           </Button>
         </div>
       </CardHeader>
@@ -192,8 +246,21 @@ export function NextjsPreview({ conversion, selectedFile, onSelectFile }: Nextjs
                       Your website has been converted to Next.js code. You can view the files in the "Files" tab and
                       explore the code in the "Code" tab.
                     </p>
-                    <div className="flex justify-center">
+                    <div className="flex flex-col sm:flex-row gap-2 justify-center">
                       <Button onClick={() => setActiveTab("files")}>View Files</Button>
+                      <Button variant="outline" onClick={downloadFiles} disabled={isDownloading}>
+                        {isDownloading ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Downloading...
+                          </>
+                        ) : (
+                          <>
+                            <DownloadIcon className="h-4 w-4 mr-2" />
+                            Download ZIP
+                          </>
+                        )}
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -341,21 +408,38 @@ ${conversion.options?.cssFramework === "tailwind" ? "tailwind.config.js    # Tai
                       <div className="bg-muted-foreground/10 p-4 rounded-md space-y-4">
                         <p className="text-muted-foreground">To use this code:</p>
                         <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
-                          <li>Download the generated files using the "Download" button</li>
                           <li>
-                            Create a new Next.js project:{" "}
-                            <code className="bg-muted-foreground/20 px-1 py-0.5 rounded text-xs">
-                              npx create-next-app my-project
-                            </code>
+                            Download the generated files using the{" "}
+                            <Button
+                              variant="link"
+                              className="p-0 h-auto text-primary"
+                              onClick={downloadFiles}
+                              disabled={isDownloading}
+                            >
+                              {isDownloading ? "Downloading..." : "Download ZIP"}
+                            </Button>{" "}
+                            button
                           </li>
-                          <li>Replace or add the generated files to your project</li>
+                          <li>Extract the contents of the ZIP file to a directory on your computer</li>
                           <li>
-                            Install dependencies:{" "}
+                            Open a terminal in that directory and install dependencies:{" "}
                             <code className="bg-muted-foreground/20 px-1 py-0.5 rounded text-xs">npm install</code>
                           </li>
                           <li>
                             Start the development server:{" "}
                             <code className="bg-muted-foreground/20 px-1 py-0.5 rounded text-xs">npm run dev</code>
+                          </li>
+                          <li>
+                            Open{" "}
+                            <a
+                              href="http://localhost:3000"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-primary underline"
+                            >
+                              http://localhost:3000
+                            </a>{" "}
+                            in your browser
                           </li>
                         </ol>
                       </div>
