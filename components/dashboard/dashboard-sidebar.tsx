@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Code, CreditCard, History, LayoutDashboard, LogOut, Settings, User } from "lucide-react"
+import { Code, CreditCard, History, LayoutDashboard, LogOut, Settings, User, Search } from "lucide-react"
 import { useAuth } from "@/components/auth/auth-provider"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -15,10 +15,12 @@ import {
   SidebarMenuItem,
   SidebarSeparator,
 } from "@/components/ui/sidebar"
+import { useSearch } from "@/components/search/search-provider"
 
 export function DashboardSidebar() {
   const pathname = usePathname()
   const { user, signOut } = useAuth()
+  const { openSearch } = useSearch()
 
   const isActive = (path: string) => {
     if (path === "/dashboard" && pathname === "/dashboard") {
@@ -64,6 +66,13 @@ export function DashboardSidebar() {
         <SidebarSeparator />
 
         <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton onClick={openSearch} tooltip="Search">
+              <Search className="h-5 w-5" />
+              <span>Search</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+
           <SidebarMenuItem>
             <SidebarMenuButton asChild isActive={pathname === "/dashboard"} tooltip="Dashboard">
               <Link href="/dashboard">

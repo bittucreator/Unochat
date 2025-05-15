@@ -1,14 +1,17 @@
 import type React from "react"
-import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar"
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
+import { DashboardSidebar } from "./dashboard-sidebar"
+import { DashboardHeader } from "./dashboard-header"
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <SidebarProvider>
-      <DashboardSidebar />
-      <SidebarInset className="bg-background">
-        <div className="h-full max-w-screen-2xl mx-auto w-full px-4">{children}</div>
-      </SidebarInset>
-    </SidebarProvider>
+    <div className="flex min-h-screen flex-col">
+      <div className="flex flex-1">
+        <DashboardSidebar />
+        <div className="flex-1 overflow-x-hidden">
+          <DashboardHeader />
+          <main className="w-full max-w-full overflow-x-hidden">{children}</main>
+        </div>
+      </div>
+    </div>
   )
 }

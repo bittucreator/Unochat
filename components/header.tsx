@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { SearchButton } from "./search/search-button"
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -22,7 +23,7 @@ export function Header() {
 
   return (
     <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center justify-between">
+      <div className="max-w-screen-2xl mx-auto px-4 flex h-16 items-center justify-between">
         <div className="flex items-center gap-6">
           <Link href="/" className="font-semibold text-xl">
             Tool<span className="text-primary">iQ</span>
@@ -54,6 +55,7 @@ export function Header() {
         </div>
 
         <div className="flex items-center gap-2">
+          <SearchButton />
           <ThemeToggle />
 
           {!isLoading && (
@@ -115,7 +117,7 @@ export function Header() {
 
       {/* Mobile Menu */}
       {isMenuOpen && (
-        <div className="container md:hidden py-4 border-t">
+        <div className="max-w-screen-2xl mx-auto px-4 md:hidden py-4 border-t">
           <nav className="flex flex-col space-y-4">
             <Link href="/pricing" className="text-foreground hover:text-primary" onClick={() => setIsMenuOpen(false)}>
               Pricing
