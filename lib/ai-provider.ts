@@ -1,7 +1,5 @@
 "use server"
 
-import { openai } from "@ai-sdk/openai"
-import { azureOpenAI } from "@ai-sdk/azure-openai"
 import { isAzureOpenAIConfigured } from "./azure-openai-client"
 
 // Define the available AI providers
@@ -25,11 +23,19 @@ export async function getAIProvider() {
 export async function getAIModel(provider?: AIProvider) {
   const activeProvider = provider || (await getAIProvider())
 
+  // Use the unified AI SDK approach
   if (activeProvider === "azure") {
-    const deploymentName = process.env.AZURE_OPENAI_API_DEPLOYMENT_NAME
-    return azureOpenAI(deploymentName!)
+    return {
+      provider: "azure",
+      apiKey: process.env.AZURE_OPENAI_API_KEY,
+      endpoint: process.env.AZURE_OPENAI_API_ENDPOINT,
+      deploymentName: process.env.AZURE_OPENAI_API_DEPLOYMENT_NAME,
+    }
   }
 
   // Default to OpenAI
-  return openai("gpt-4o")
+  return {
+    provider: "openai",
+    model: "gpt-4o",
+  }
 }

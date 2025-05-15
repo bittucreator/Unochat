@@ -41,10 +41,19 @@ export async function processCommand(command: string): Promise<string> {
     }
 
     // For other commands, use AI to generate a response
-    const model = await getAIModel()
+    const modelConfig = await getAIModel()
 
+    // Use the unified AI SDK
     const { text } = await generateText({
-      model,
+      model:
+        modelConfig.provider === "azure"
+          ? {
+              type: "azure",
+              apiKey: modelConfig.apiKey as string,
+              endpoint: modelConfig.endpoint as string,
+              deploymentName: modelConfig.deploymentName as string,
+            }
+          : { type: "openai", model: modelConfig.model as string },
       prompt: `You are an AI assistant for a Linear task management system. 
       Respond to this user command as if you've processed it and taken action: "${command}"
       Keep your response under 150 words and focus on what action was taken.`,
@@ -77,10 +86,18 @@ function formatTasksResponse(tasks: Task[], type: string) {
 // Analyze task description and suggest improvements
 export async function analyzeTaskDescription(description: string): Promise<string> {
   try {
-    const model = await getAIModel()
+    const modelConfig = await getAIModel()
 
     const { text } = await generateText({
-      model,
+      model:
+        modelConfig.provider === "azure"
+          ? {
+              type: "azure",
+              apiKey: modelConfig.apiKey as string,
+              endpoint: modelConfig.endpoint as string,
+              deploymentName: modelConfig.deploymentName as string,
+            }
+          : { type: "openai", model: modelConfig.model as string },
       prompt: `Analyze this task description and suggest improvements to make it clearer and more actionable:
       
       "${description}"
@@ -99,10 +116,18 @@ export async function analyzeTaskDescription(description: string): Promise<strin
 // Suggest task priority based on description
 export async function suggestTaskPriority(title: string, description: string): Promise<"low" | "medium" | "high"> {
   try {
-    const model = await getAIModel()
+    const modelConfig = await getAIModel()
 
     const { text } = await generateText({
-      model,
+      model:
+        modelConfig.provider === "azure"
+          ? {
+              type: "azure",
+              apiKey: modelConfig.apiKey as string,
+              endpoint: modelConfig.endpoint as string,
+              deploymentName: modelConfig.deploymentName as string,
+            }
+          : { type: "openai", model: modelConfig.model as string },
       prompt: `Based on this task title and description, suggest an appropriate priority level (low, medium, or high):
       
       Title: "${title}"
@@ -129,10 +154,18 @@ export async function suggestTaskPriority(title: string, description: string): P
 // Estimate task completion time
 export async function estimateTaskTime(title: string, description: string): Promise<string> {
   try {
-    const model = await getAIModel()
+    const modelConfig = await getAIModel()
 
     const { text } = await generateText({
-      model,
+      model:
+        modelConfig.provider === "azure"
+          ? {
+              type: "azure",
+              apiKey: modelConfig.apiKey as string,
+              endpoint: modelConfig.endpoint as string,
+              deploymentName: modelConfig.deploymentName as string,
+            }
+          : { type: "openai", model: modelConfig.model as string },
       prompt: `Based on this task title and description, estimate how long it might take to complete:
       
       Title: "${title}"
@@ -156,7 +189,7 @@ export async function generateTaskInsights(tasks: Task[]): Promise<string> {
       return "No tasks available to analyze."
     }
 
-    const model = await getAIModel()
+    const modelConfig = await getAIModel()
 
     // Format tasks for the prompt
     const tasksFormatted = tasks
@@ -172,7 +205,15 @@ export async function generateTaskInsights(tasks: Task[]): Promise<string> {
       .join("\n\n")
 
     const { text } = await generateText({
-      model,
+      model:
+        modelConfig.provider === "azure"
+          ? {
+              type: "azure",
+              apiKey: modelConfig.apiKey as string,
+              endpoint: modelConfig.endpoint as string,
+              deploymentName: modelConfig.deploymentName as string,
+            }
+          : { type: "openai", model: modelConfig.model as string },
       prompt: `Analyze these tasks and provide insights about workload, priorities, and potential bottlenecks:
       
       ${tasksFormatted}
