@@ -3,7 +3,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import { AppLayout } from "@/components/dashboard/app-layout"
 
-export default async function DashboardLayout({
+export default async function ProfileLayout({
   children,
 }: {
   children: React.ReactNode
@@ -22,7 +22,7 @@ export default async function DashboardLayout({
   }
 
   if (!session) {
-    redirect("/login?redirectTo=/dashboard")
+    redirect("/login?redirectTo=/profile")
   }
 
   return <AppLayout>{children}</AppLayout>

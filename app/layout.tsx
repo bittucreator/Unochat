@@ -1,18 +1,18 @@
 import type React from "react"
-import "@/app/globals.css"
-import { ThemeProvider } from "@/components/theme-provider"
-import { Inter } from "next/font/google"
 import type { Metadata } from "next"
-import { Header } from "@/components/header"
-import { Footer } from "@/components/footer"
-import { AuthProvider } from "@/components/auth/auth-provider"
-import { Toaster } from "@/components/ui/toaster"
+import { Inter } from "next/font/google"
+import "./globals.css"
+import ClientLayout from "./client-layout"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "TooliQ - Designer & Developer Assistant",
-  description: "Convert websites to Figma designs and Next.js code with ease",
+  title: {
+    default: "TooliQ - Web Development Tools",
+    template: "%s | TooliQ",
+  },
+  description: "Transform websites into Next.js code with TooliQ",
+  keywords: ["website converter", "Next.js generator", "web development tools"],
     generator: 'v0.dev'
 }
 
@@ -24,16 +24,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-          <AuthProvider>
-            <div className="flex min-h-screen flex-col">
-              <Header />
-              <main className="flex-1">{children}</main>
-              <Footer />
-              <Toaster />
-            </div>
-          </AuthProvider>
-        </ThemeProvider>
+        <ClientLayout>{children}</ClientLayout>
       </body>
     </html>
   )

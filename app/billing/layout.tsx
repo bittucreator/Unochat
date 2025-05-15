@@ -1,8 +1,7 @@
 import type React from "react"
 import { createServerSupabaseClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
-import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar"
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
+import { AppLayout } from "@/components/dashboard/app-layout"
 
 export default async function BillingLayout({
   children,
@@ -26,12 +25,5 @@ export default async function BillingLayout({
     redirect("/login?redirectTo=/billing")
   }
 
-  return (
-    <SidebarProvider>
-      <DashboardSidebar />
-      <SidebarInset className="bg-background">
-        <div className="h-full">{children}</div>
-      </SidebarInset>
-    </SidebarProvider>
-  )
+  return <AppLayout>{children}</AppLayout>
 }
