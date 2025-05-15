@@ -2,18 +2,9 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import {
-  NavigationMenu,
-  NavigationMenuContent,
-  NavigationMenuItem,
-  NavigationMenuLink,
-  NavigationMenuList,
-  NavigationMenuTrigger,
-  navigationMenuTriggerStyle,
-} from "@/components/ui/navigation-menu"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { useState } from "react"
-import { Menu, X, User } from "lucide-react"
+import { Menu, X, User, Settings, CreditCard } from "lucide-react"
 import { useAuth } from "./auth/auth-provider"
 import {
   DropdownMenu,
@@ -38,50 +29,42 @@ export function Header() {
           </Link>
 
           {/* Desktop Navigation */}
-          <NavigationMenu className="hidden md:flex">
-            <NavigationMenuList>
-              <NavigationMenuItem>
-                <NavigationMenuTrigger>Tools</NavigationMenuTrigger>
-                <NavigationMenuContent>
-                  <div className="grid gap-3 p-4 w-[400px] md:w-[500px]">
-                    <div className="grid grid-cols-2 gap-3">
-                      <Link
-                        href="/figma-converter"
-                        className="group flex h-auto w-full flex-col justify-between rounded-md border p-4 hover:bg-muted"
-                      >
-                        <div className="mb-2 mt-2 text-lg font-medium">Figma Converter</div>
-                        <div className="text-sm text-muted-foreground">Convert websites to Figma designs</div>
-                      </Link>
-                      <Link
-                        href="/nextjs-generator"
-                        className="group flex h-auto w-full flex-col justify-between rounded-md border p-4 hover:bg-muted"
-                      >
-                        <div className="mb-2 mt-2 text-lg font-medium">Next.js Generator</div>
-                        <div className="text-sm text-muted-foreground">Generate Next.js code from websites</div>
-                      </Link>
-                    </div>
-                  </div>
-                </NavigationMenuContent>
-              </NavigationMenuItem>
-              <NavigationMenuItem>
-                <Link href="/pricing" legacyBehavior passHref>
-                  <NavigationMenuLink className={navigationMenuTriggerStyle()}>Pricing</NavigationMenuLink>
+          <nav className="hidden md:flex items-center space-x-6">
+            <Link
+              href="/pricing"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Pricing
+            </Link>
+            <Link
+              href="/documentation"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Documentation
+            </Link>
+            {user && (
+              <>
+                <Link
+                  href="/dashboard"
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Dashboard
                 </Link>
-              </NavigationMenuItem>
-              <NavigationMenuItem>
-                <Link href="/documentation" legacyBehavior passHref>
-                  <NavigationMenuLink className={navigationMenuTriggerStyle()}>Documentation</NavigationMenuLink>
+                <Link
+                  href="/settings"
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Settings
                 </Link>
-              </NavigationMenuItem>
-              {user && (
-                <NavigationMenuItem>
-                  <Link href="/dashboard" legacyBehavior passHref>
-                    <NavigationMenuLink className={navigationMenuTriggerStyle()}>Dashboard</NavigationMenuLink>
-                  </Link>
-                </NavigationMenuItem>
-              )}
-            </NavigationMenuList>
-          </NavigationMenu>
+                <Link
+                  href="/billing"
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Billing
+                </Link>
+              </>
+            )}
+          </nav>
         </div>
 
         <div className="flex items-center gap-2">
@@ -108,17 +91,29 @@ export function Header() {
                     <DropdownMenuLabel>My Account</DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
-                      <Link href="/dashboard">Dashboard</Link>
+                      <Link href="/dashboard" className="flex items-center">
+                        <User className="mr-2 h-4 w-4" />
+                        Dashboard
+                      </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/profile">Profile</Link>
+                      <Link href="/settings" className="flex items-center">
+                        <Settings className="mr-2 h-4 w-4" />
+                        Settings
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/billing" className="flex items-center">
+                        <CreditCard className="mr-2 h-4 w-4" />
+                        Billing
+                      </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => signOut()}>Log out</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
-                <Button asChild className="hidden md:inline-flex">
+                <Button asChild className="hidden md:inline-flex rounded-full">
                   <Link href="/login">Sign In</Link>
                 </Button>
               )}
@@ -136,20 +131,6 @@ export function Header() {
       {isMenuOpen && (
         <div className="container md:hidden py-4 border-t">
           <nav className="flex flex-col space-y-4">
-            <Link
-              href="/figma-converter"
-              className="text-foreground hover:text-primary"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Figma Converter
-            </Link>
-            <Link
-              href="/nextjs-generator"
-              className="text-foreground hover:text-primary"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Next.js Generator
-            </Link>
             <Link href="/pricing" className="text-foreground hover:text-primary" onClick={() => setIsMenuOpen(false)}>
               Pricing
             </Link>
@@ -170,11 +151,18 @@ export function Header() {
                   Dashboard
                 </Link>
                 <Link
-                  href="/profile"
+                  href="/settings"
                   className="text-foreground hover:text-primary"
                   onClick={() => setIsMenuOpen(false)}
                 >
-                  Profile
+                  Settings
+                </Link>
+                <Link
+                  href="/billing"
+                  className="text-foreground hover:text-primary"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Billing
                 </Link>
                 <button
                   className="text-foreground hover:text-primary text-left"

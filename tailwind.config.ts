@@ -56,8 +56,8 @@ const config = {
       },
       borderRadius: {
         lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        md: "calc(var(--radius) - 0.5rem)",
+        sm: "calc(var(--radius) - 0.75rem)",
       },
       keyframes: {
         "accordion-down": {
@@ -68,10 +68,21 @@ const config = {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
+        float: {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-10px)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        float: "float 6s ease-in-out infinite",
+      },
+      fontFamily: {
+        sans: ["Inter var", "Inter", "sans-serif"],
+      },
+      boxShadow: {
+        amie: "0 2px 8px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.1)",
       },
     },
   },
