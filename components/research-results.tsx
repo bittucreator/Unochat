@@ -1,14 +1,11 @@
-import { Suspense } from "react"
-import { ResearchContent } from "@/components/research-content"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
+import { ResearchContent } from "@/components/research-content"
 
 export function ResearchResults({ query }: { query: string }) {
   return (
     <div className="space-y-6">
-      <Suspense fallback={<ResultsSkeleton />}>
-        <ResearchContent query={query} />
-      </Suspense>
+      <ResearchContent query={query} />
     </div>
   )
 }

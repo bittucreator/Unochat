@@ -14,7 +14,7 @@ export default async function ResultsPage({
       <div className="w-full max-w-6xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <Link href="/">
-            <h1 className="text-2xl font-bold tracking-tight">Research Agent</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Azure OpenAI Research</h1>
           </Link>
           <div className="w-1/2">
             <SearchForm />
