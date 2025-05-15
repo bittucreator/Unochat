@@ -15,11 +15,16 @@ interface WebsiteToFigmaContextType {
   authState: FigmaAuthState
 }
 
+// Default auth state to prevent undefined errors
+const defaultAuthState: FigmaAuthState = {
+  isAuthenticated: false,
+}
+
 const WebsiteToFigmaContext = createContext<WebsiteToFigmaContextType | undefined>(undefined)
 
 export function WebsiteToFigmaConversionProvider({
   children,
-  authState,
+  authState = defaultAuthState,
 }: {
   children: ReactNode
   authState: FigmaAuthState

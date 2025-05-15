@@ -105,6 +105,9 @@ export function UrlForm({
     }
   }
 
+  // Only check auth state for Figma conversions
+  const isButtonDisabled = isLoading || (conversionType === "figma" && !authState.isAuthenticated)
+
   return (
     <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3">
       <div className="relative flex-1">
@@ -117,7 +120,7 @@ export function UrlForm({
           onChange={(e) => setUrl(e.target.value)}
         />
       </div>
-      <Button type="submit" disabled={isLoading || (conversionType === "figma" && !authState.isAuthenticated)}>
+      <Button type="submit" disabled={isButtonDisabled}>
         {isLoading ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />

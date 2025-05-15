@@ -1,8 +1,12 @@
 import { UrlForm } from "@/components/url-form"
 import { NextjsCustomizationPanel } from "@/components/nextjs-customization-panel"
 import { NextjsPreview } from "@/components/nextjs-preview"
+import { getFigmaAuthState } from "../actions/figma-actions"
 
-export default function NextjsGeneratorPage() {
+export default async function NextjsGeneratorPage() {
+  // Fetch auth state to pass to components that need it
+  const authState = await getFigmaAuthState()
+
   return (
     <div className="container mx-auto px-4 py-12">
       <div className="mb-8">
@@ -12,7 +16,7 @@ export default function NextjsGeneratorPage() {
         </p>
       </div>
 
-      <UrlForm />
+      <UrlForm authState={authState} conversionType="nextjs" />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
         <NextjsCustomizationPanel />

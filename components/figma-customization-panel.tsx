@@ -13,7 +13,12 @@ import type { FigmaAuthState } from "@/lib/types/figma"
 import { logoutFromFigma, startFigmaAuth } from "@/app/actions/figma-actions"
 import { useToast } from "@/hooks/use-toast"
 
-export function FigmaCustomizationPanel({ authState }: { authState: FigmaAuthState }) {
+// Default auth state to prevent undefined errors
+const defaultAuthState: FigmaAuthState = {
+  isAuthenticated: false,
+}
+
+export function FigmaCustomizationPanel({ authState = defaultAuthState }: { authState?: FigmaAuthState }) {
   const [primaryColor, setPrimaryColor] = useState("#7C3AED")
   const [secondaryColor, setSecondaryColor] = useState("#4F46E5")
   const [backgroundColor, setBackgroundColor] = useState("#FFFFFF")
