@@ -3,6 +3,9 @@ import type { NextRequest } from "next/server"
 import { validateConfig } from "./lib/config"
 import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs"
 
+const publicRoutes = ["/", "/login", "/pricing", "/documentation", "/setup"]
+const protectedRoutes = ["/dashboard", "/profile", "/settings", "/billing", "/figma-converter", "/nextjs-generator"]
+
 export async function middleware(request: NextRequest) {
   // Only run this check in development to avoid unnecessary overhead in production
   if (process.env.NODE_ENV === "development") {
@@ -21,13 +24,18 @@ export async function middleware(request: NextRequest) {
   // Create a Supabase client for auth checks
   const res = NextResponse.next()
   const supabase = createMiddlewareClient({ req: request, res })
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+
+  // Redirect authenticated users from home page to dashboard
+  if (session && request.nextUrl.pathname === "/") {
+    const redirectUrl = new URL("/dashboard", request.url)
+    return NextResponse.redirect(redirectUrl)
+  }
 
   // Check if the user is authenticated for protected routes
-  if (request.nextUrl.pathname.startsWith("/dashboard") || request.nextUrl.pathname.startsWith("/profile")) {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-
+  if (protectedRoutes.some((route) => request.nextUrl.pathname.startsWith(route))) {
     if (!session) {
       const redirectUrl = new URL("/login", request.url)
       redirectUrl.searchParams.set("redirectTo", request.nextUrl.pathname)
@@ -38,13 +46,7 @@ export async function middleware(request: NextRequest) {
   return res
 }
 
-// Only run the middleware on specific paths
+// Run the middleware on all routes
 export const config = {
-  matcher: [
-    "/figma-converter/:path*",
-    "/nextjs-generator/:path*",
-    "/api/:path*",
-    "/dashboard/:path*",
-    "/profile/:path*",
-  ],
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|.*\\.svg).*)"],
 }

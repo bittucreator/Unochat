@@ -1,76 +1,88 @@
-import { createServerSupabaseClient } from "@/lib/supabase/server"
-import { redirect } from "next/navigation"
+"use client"
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ProfileSettings } from "@/components/settings/profile-settings"
-import { AccountSettings } from "@/components/settings/account-settings"
-import { NotificationSettings } from "@/components/settings/notification-settings"
-import { ApiSettings } from "@/components/settings/api-settings"
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
+import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import { useAuth } from "@/components/auth/auth-provider"
 
-export default async function SettingsPage() {
-  const supabase = createServerSupabaseClient()
-
-  // Check if user is authenticated
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  if (!session) {
-    redirect("/login")
-  }
-
-  // Fetch user metadata
-  const { data: userMetadata } = await supabase.from("users_metadata").select("*").eq("id", session.user.id).single()
+export default function SettingsPage() {
+  const { user } = useAuth()
 
   return (
-    <div className="container mx-auto px-4 py-12">
-      <h1 className="text-3xl font-bold mb-8">Settings</h1>
+    <div className="p-6 md:p-8">
+      <h1 className="text-3xl font-bold mb-6">Settings</h1>
 
-      <div className="amie-card">
-        <Tabs defaultValue="profile" className="w-full">
-          <TabsList className="w-full border-b rounded-none p-0 h-auto">
-            <div className="container flex overflow-auto">
-              <TabsTrigger
-                value="profile"
-                className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none py-4 px-6"
-              >
-                Profile
-              </TabsTrigger>
-              <TabsTrigger
-                value="account"
-                className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none py-4 px-6"
-              >
-                Account
-              </TabsTrigger>
-              <TabsTrigger
-                value="notifications"
-                className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none py-4 px-6"
-              >
-                Notifications
-              </TabsTrigger>
-              <TabsTrigger
-                value="api"
-                className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none py-4 px-6"
-              >
-                API
-              </TabsTrigger>
-            </div>
-          </TabsList>
-          <div className="p-6">
-            <TabsContent value="profile">
-              <ProfileSettings user={session.user} userMetadata={userMetadata} />
-            </TabsContent>
-            <TabsContent value="account">
-              <AccountSettings user={session.user} />
-            </TabsContent>
-            <TabsContent value="notifications">
-              <NotificationSettings user={session.user} />
-            </TabsContent>
-            <TabsContent value="api">
-              <ApiSettings user={session.user} />
-            </TabsContent>
-          </div>
-        </Tabs>
-      </div>
+      <Tabs defaultValue="profile" className="w-full">
+        <TabsList className="mb-6">
+          <TabsTrigger value="profile">Profile</TabsTrigger>
+          <TabsTrigger value="account">Account</TabsTrigger>
+          <TabsTrigger value="appearance">Appearance</TabsTrigger>
+          <TabsTrigger value="notifications">Notifications</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="profile">
+          <Card>
+            <CardHeader>
+              <CardTitle>Profile Information</CardTitle>
+              <CardDescription>Update your profile information</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Full Name</Label>
+                <Input id="name" defaultValue={user?.user_metadata.full_name || ""} placeholder="Your name" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input id="email" defaultValue={user?.email || ""} disabled />
+                <p className="text-sm text-muted-foreground">
+                  Your email is connected to your Google account and cannot be changed.
+                </p>
+              </div>
+              <Button>Save Changes</Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="account">
+          <Card>
+            <CardHeader>
+              <CardTitle>Account Settings</CardTitle>
+              <CardDescription>Manage your account settings and preferences</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">
+                Your account is connected with Google. You can manage additional preferences here.
+              </p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="appearance">
+          <Card>
+            <CardHeader>
+              <CardTitle>Appearance</CardTitle>
+              <CardDescription>Customize how TooliQ looks and feels</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">Appearance settings coming soon.</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="notifications">
+          <Card>
+            <CardHeader>
+              <CardTitle>Notification Preferences</CardTitle>
+              <CardDescription>Manage how you receive notifications</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">Notification settings coming soon.</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

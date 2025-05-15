@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { createContext, useContext, useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import type { Session, User } from "@supabase/supabase-js"
 import { getSupabaseClient } from "@/lib/supabase/client"
 
@@ -17,11 +17,14 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+const publicRoutes = ["/", "/login", "/pricing", "/documentation"]
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
+  const pathname = usePathname()
   const supabase = getSupabaseClient()
 
   useEffect(() => {
@@ -38,6 +41,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(session)
       setUser(session?.user || null)
       setIsLoading(false)
+
+      // If user is logged in and on public routes (except homepage), redirect to dashboard
+      if (session?.user && pathname !== "/" && publicRoutes.includes(pathname)) {
+        router.push("/dashboard")
+      }
     }
 
     fetchSession()
@@ -48,20 +56,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(session)
       setUser(session?.user || null)
       setIsLoading(false)
+
+      // If user just logged in and is on a public route, redirect to dashboard
+      if (session?.user && publicRoutes.includes(pathname)) {
+        router.push("/dashboard")
+      }
+
       router.refresh()
     })
 
     return () => {
       subscription.unsubscribe()
     }
-  }, [supabase, router])
+  }, [supabase, router, pathname])
 
   const signInWithGoogle = async () => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${window.location.origin}/auth/callback?redirectTo=/dashboard`,
           queryParams: {
             access_type: "offline",
             prompt: "consent",

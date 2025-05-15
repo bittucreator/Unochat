@@ -2,7 +2,6 @@ import type React from "react"
 import { createServerSupabaseClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar"
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 
 export default async function FigmaConverterLayout({
   children,
@@ -21,13 +20,9 @@ export default async function FigmaConverterLayout({
   }
 
   return (
-    <div className="min-h-screen">
-      <SidebarProvider>
-        <DashboardSidebar />
-        <SidebarInset className="bg-background">
-          <div className="h-full">{children}</div>
-        </SidebarInset>
-      </SidebarProvider>
+    <div className="flex h-[calc(100vh-4rem)]">
+      <DashboardSidebar user={session.user} />
+      <div className="flex-1 overflow-auto">{children}</div>
     </div>
   )
 }
