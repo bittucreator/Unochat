@@ -9,6 +9,8 @@ import {
   refreshAccessToken,
 } from "@/lib/services/figma-api"
 import type { FigmaAuthState, WebsiteElement, WebsiteToFigmaConversion } from "@/lib/types/figma"
+import { createServerSupabaseClient } from "@/lib/supabase/server"
+import { revalidatePath } from "next/cache"
 
 // Helper to extract website elements (simplified version)
 async function extractWebsiteElements(url: string): Promise<WebsiteElement[]> {
@@ -223,13 +225,40 @@ export async function logoutFromFigma() {
 // Convert website to Figma design
 export async function convertWebsiteToFigma(url: string, options: any = {}): Promise<WebsiteToFigmaConversion> {
   const authState = await getFigmaAuthState()
+  const supabase = createServerSupabaseClient()
+
+  // Get current user
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+  const userId = session?.user?.id
 
   if (!authState.isAuthenticated || !authState.accessToken) {
     throw new Error("Not authenticated with Figma")
   }
 
   try {
-    // Create a new conversion record
+    // Create a new conversion record in the database
+    const conversionData = {
+      user_id: userId,
+      url,
+      type: "figma" as const,
+      status: "processing" as const,
+      options: options,
+    }
+
+    // Insert the conversion record
+    const { data: conversionRecord, error } = await supabase
+      .from("website_conversions")
+      .insert(conversionData)
+      .select()
+      .single()
+
+    if (error) {
+      throw new Error(`Failed to create conversion record: ${error.message}`)
+    }
+
+    // Create a conversion object for the client
     const conversion: WebsiteToFigmaConversion = {
       url,
       status: "processing",
@@ -249,14 +278,49 @@ export async function convertWebsiteToFigma(url: string, options: any = {}): Pro
     // Create Figma nodes in the file
     await createFigmaNodes(authState.accessToken, figmaFile.file_key, figmaElements)
 
-    // Update conversion record
+    // Update conversion record in the database
+    const figmaFileUrl = `https://www.figma.com/file/${figmaFile.file_key}/${encodeURIComponent(fileName)}`
+
+    const { error: updateError } = await supabase
+      .from("website_conversions")
+      .update({
+        status: "completed",
+        figma_file_key: figmaFile.file_key,
+        figma_file_url: figmaFileUrl,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", conversionRecord.id)
+
+    if (updateError) {
+      throw new Error(`Failed to update conversion record: ${updateError.message}`)
+    }
+
+    // Update conversion object for the client
     conversion.status = "completed"
     conversion.figmaFileKey = figmaFile.file_key
-    conversion.figmaFileUrl = `https://www.figma.com/file/${figmaFile.file_key}/${encodeURIComponent(fileName)}`
+    conversion.figmaFileUrl = figmaFileUrl
+
+    // Revalidate the dashboard page
+    revalidatePath("/dashboard")
 
     return conversion
   } catch (error) {
     console.error("Error converting website to Figma:", error)
+
+    // Update the conversion record in the database if it exists
+    if (userId) {
+      await supabase
+        .from("website_conversions")
+        .update({
+          status: "failed",
+          error: (error as Error).message,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("user_id", userId)
+        .eq("url", url)
+        .eq("type", "figma")
+        .eq("status", "processing")
+    }
 
     return {
       url,

@@ -13,10 +13,21 @@ import {
 } from "@/components/ui/navigation-menu"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { useState } from "react"
-import { Menu, X } from "lucide-react"
+import { Menu, X, User } from "lucide-react"
+import { useAuth } from "./auth/auth-provider"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const { user, signOut, isLoading } = useAuth()
 
   return (
     <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -62,15 +73,57 @@ export function Header() {
                   <NavigationMenuLink className={navigationMenuTriggerStyle()}>Documentation</NavigationMenuLink>
                 </Link>
               </NavigationMenuItem>
+              {user && (
+                <NavigationMenuItem>
+                  <Link href="/dashboard" legacyBehavior passHref>
+                    <NavigationMenuLink className={navigationMenuTriggerStyle()}>Dashboard</NavigationMenuLink>
+                  </Link>
+                </NavigationMenuItem>
+              )}
             </NavigationMenuList>
           </NavigationMenu>
         </div>
 
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <Button asChild className="hidden md:inline-flex">
-            <Link href="/login">Sign In</Link>
-          </Button>
+
+          {!isLoading && (
+            <>
+              {user ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="rounded-full">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage
+                          src={user.user_metadata.avatar_url || "/placeholder.svg"}
+                          alt={user.user_metadata.full_name || user.email || ""}
+                        />
+                        <AvatarFallback>
+                          <User className="h-4 w-4" />
+                        </AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/dashboard">Dashboard</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/profile">Profile</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => signOut()}>Log out</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Button asChild className="hidden md:inline-flex">
+                  <Link href="/login">Sign In</Link>
+                </Button>
+              )}
+            </>
+          )}
 
           {/* Mobile Menu Button */}
           <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setIsMenuOpen(!isMenuOpen)}>
@@ -107,9 +160,37 @@ export function Header() {
             >
               Documentation
             </Link>
-            <Link href="/login" className="text-foreground hover:text-primary" onClick={() => setIsMenuOpen(false)}>
-              Sign In
-            </Link>
+            {user ? (
+              <>
+                <Link
+                  href="/dashboard"
+                  className="text-foreground hover:text-primary"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Dashboard
+                </Link>
+                <Link
+                  href="/profile"
+                  className="text-foreground hover:text-primary"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Profile
+                </Link>
+                <button
+                  className="text-foreground hover:text-primary text-left"
+                  onClick={() => {
+                    signOut()
+                    setIsMenuOpen(false)
+                  }}
+                >
+                  Log out
+                </button>
+              </>
+            ) : (
+              <Link href="/login" className="text-foreground hover:text-primary" onClick={() => setIsMenuOpen(false)}>
+                Sign In
+              </Link>
+            )}
           </nav>
         </div>
       )}

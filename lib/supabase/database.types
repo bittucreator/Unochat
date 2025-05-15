@@ -1,0 +1,115 @@
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
+
+export interface Database {
+  public: {
+    Tables: {
+      users_metadata: {
+        Row: {
+          id: string
+          full_name: string | null
+          avatar_url: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          full_name?: string | null
+          avatar_url?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          full_name?: string | null
+          avatar_url?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      figma_connections: {
+        Row: {
+          id: string
+          user_id: string
+          access_token: string
+          refresh_token: string
+          expires_at: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          access_token: string
+          refresh_token: string
+          expires_at: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          access_token?: string
+          refresh_token?: string
+          expires_at?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      website_conversions: {
+        Row: {
+          id: string
+          user_id: string
+          url: string
+          type: "figma" | "nextjs"
+          status: "pending" | "processing" | "completed" | "failed"
+          figma_file_key: string | null
+          figma_file_url: string | null
+          nextjs_code_url: string | null
+          options: Json | null
+          error: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          url: string
+          type: "figma" | "nextjs"
+          status: "pending" | "processing" | "completed" | "failed"
+          figma_file_key?: string | null
+          figma_file_url?: string | null
+          nextjs_code_url?: string | null
+          options?: Json | null
+          error?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          url?: string
+          type?: "figma" | "nextjs"
+          status?: "pending" | "processing" | "completed" | "failed"
+          figma_file_key?: string | null
+          figma_file_url?: string | null
+          nextjs_code_url?: string | null
+          options?: Json | null
+          error?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      [_ in never]: never
+    }
+    Enums: {
+      [_ in never]: never
+    }
+  }
+}
+
+export type Tables<T extends keyof Database["public"]["Tables"]> = Database["public"]["Tables"][T]["Row"]
