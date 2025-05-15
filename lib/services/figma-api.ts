@@ -1,22 +1,23 @@
 import type { FigmaAuthResponse, FigmaCreateFileResponse } from "../types/figma"
+import { config } from "../config"
 
 export async function getAuthorizationUrl() {
-  const clientId = process.env.FIGMA_CLIENT_ID
-  const redirectUri = process.env.FIGMA_REDIRECT_URI
+  const clientId = config.figma.clientId
+  const redirectUri = config.figma.redirectUri
   const state = Math.random().toString(36).substring(7)
 
   // Store state in session for verification when the user returns
   // This would typically be stored in a database or session
 
-  const authUrl = `https://www.figma.com/oauth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri!)}&scope=file_read file_write&state=${state}&response_type=code`
+  const authUrl = `https://www.figma.com/oauth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=file_read file_write&state=${state}&response_type=code`
 
   return { authUrl, state }
 }
 
 export async function exchangeCodeForToken(code: string): Promise<FigmaAuthResponse> {
-  const clientId = process.env.FIGMA_CLIENT_ID
-  const clientSecret = process.env.FIGMA_CLIENT_SECRET
-  const redirectUri = process.env.FIGMA_REDIRECT_URI
+  const clientId = config.figma.clientId
+  const clientSecret = config.figma.clientSecret
+  const redirectUri = config.figma.redirectUri
 
   const response = await fetch("https://www.figma.com/api/oauth/token", {
     method: "POST",
@@ -41,8 +42,8 @@ export async function exchangeCodeForToken(code: string): Promise<FigmaAuthRespo
 }
 
 export async function refreshAccessToken(refreshToken: string): Promise<FigmaAuthResponse> {
-  const clientId = process.env.FIGMA_CLIENT_ID
-  const clientSecret = process.env.FIGMA_CLIENT_SECRET
+  const clientId = config.figma.clientId
+  const clientSecret = config.figma.clientSecret
 
   const response = await fetch("https://www.figma.com/api/oauth/refresh", {
     method: "POST",
