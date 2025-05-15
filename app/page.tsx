@@ -1,4 +1,5 @@
 import { SearchForm } from "@/components/search-form"
+import { AzureSetupGuide } from "@/components/azure-setup-guide"
 
 export default function Home() {
   return (
@@ -10,6 +11,8 @@ export default function Home() {
         </div>
 
         <SearchForm />
+
+        <AzureSetupGuide />
       </div>
     </main>
   )
