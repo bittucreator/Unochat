@@ -14,16 +14,38 @@ export interface GeneratedFile {
 }
 
 export interface NextjsGenerationOptions {
+  // Framework options
   framework: "nextjs-app" | "nextjs-pages" | "react"
   cssFramework: "tailwind" | "css-modules" | "styled-components"
   useTypeScript: boolean
   useEsLint: boolean
   components: "shadcn" | "mantine" | "mui" | "chakra" | "none"
+
+  // Styling options
   primaryColor: string
   secondaryColor: string
+  accentColor: string
+  fontFamily: "inter" | "roboto" | "open-sans" | "poppins" | "system"
+  borderRadius: "none" | "small" | "medium" | "large" | "full"
+
+  // Layout options
+  layout: "landing" | "dashboard" | "blog" | "ecommerce" | "portfolio" | "docs"
+  navigationStyle: "horizontal" | "vertical" | "both" | "minimal"
+  footerStyle: "simple" | "detailed" | "minimal" | "none"
+
+  // Feature options
   useImageOptimization: boolean
   useServerComponents: boolean
   useRouteHandlers: boolean
+  useDarkMode: boolean
+  useAnimations: boolean
+  useInternationalization: boolean
+  useAuthentication: boolean
+  useSEO: boolean
+
+  // Advanced options
+  performanceOptimization: "none" | "basic" | "advanced"
+  accessibilityLevel: "none" | "basic" | "wcag-aa" | "wcag-aaa"
 }
 
 export interface WebsiteElement {

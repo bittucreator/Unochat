@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Code, CreditCard, Figma, History, LayoutDashboard, LogOut, Settings, User } from "lucide-react"
+import { Code, CreditCard, History, LayoutDashboard, LogOut, Settings, User } from "lucide-react"
 import { useAuth } from "@/components/auth/auth-provider"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -69,15 +69,6 @@ export function DashboardSidebar() {
               <Link href="/dashboard">
                 <LayoutDashboard className="h-5 w-5" />
                 <span>Dashboard</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={isActive("/figma-converter")} tooltip="Figma Converter">
-              <Link href="/figma-converter">
-                <Figma className="h-5 w-5" />
-                <span>Figma Converter</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

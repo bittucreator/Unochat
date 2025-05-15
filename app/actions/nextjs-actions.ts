@@ -8,16 +8,38 @@ import { revalidatePath } from "next/cache"
 
 // Default options for Next.js code generation
 const defaultOptions: NextjsGenerationOptions = {
+  // Framework options
   framework: "nextjs-app",
   cssFramework: "tailwind",
   useTypeScript: true,
   useEsLint: true,
   components: "shadcn",
+
+  // Styling options
   primaryColor: "#7C3AED",
   secondaryColor: "#4F46E5",
+  accentColor: "#F43F5E",
+  fontFamily: "inter",
+  borderRadius: "medium",
+
+  // Layout options
+  layout: "landing",
+  navigationStyle: "horizontal",
+  footerStyle: "simple",
+
+  // Feature options
   useImageOptimization: true,
   useServerComponents: true,
   useRouteHandlers: true,
+  useDarkMode: true,
+  useAnimations: true,
+  useInternationalization: false,
+  useAuthentication: false,
+  useSEO: true,
+
+  // Advanced options
+  performanceOptimization: "basic",
+  accessibilityLevel: "wcag-aa",
 }
 
 // Convert website to Next.js code
