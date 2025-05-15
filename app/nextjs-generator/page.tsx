@@ -1,6 +1,7 @@
-import { UrlForm } from "@/components/url-form"
+import { EnhancedUrlForm as UrlForm } from "@/components/website-to-nextjs-provider"
 import { NextjsCustomizationPanel } from "@/components/nextjs-customization-panel"
-import { NextjsPreview } from "@/components/nextjs-preview"
+import { EnhancedNextjsPreview as NextjsPreview } from "@/components/website-to-nextjs-provider"
+import { WebsiteToNextjsConversionProvider } from "@/components/website-to-nextjs-provider"
 import { getFigmaAuthState } from "../actions/figma-actions"
 
 export default async function NextjsGeneratorPage() {
@@ -16,14 +17,17 @@ export default async function NextjsGeneratorPage() {
         </p>
       </div>
 
-      <UrlForm authState={authState} conversionType="nextjs" />
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
-        <NextjsCustomizationPanel />
-        <div className="lg:col-span-2">
-          <NextjsPreview />
+      <WebsiteToNextjsConversionProvider authState={authState}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="col-span-1">
+            <UrlForm />
+            <NextjsCustomizationPanel />
+          </div>
+          <div className="col-span-1">
+            <NextjsPreview />
+          </div>
         </div>
-      </div>
+      </WebsiteToNextjsConversionProvider>
     </div>
   )
 }

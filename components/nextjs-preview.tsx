@@ -1,13 +1,140 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
-import { CopyIcon, DownloadIcon } from "lucide-react"
+import { AlertCircle, CopyIcon, DownloadIcon, FileIcon, FolderIcon } from "lucide-react"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import type { WebsiteToNextjsConversion } from "@/lib/types/nextjs"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Tree, type TreeItem } from "@/components/ui/tree"
 
-export function NextjsPreview() {
+interface NextjsPreviewProps {
+  conversion?: WebsiteToNextjsConversion
+  selectedFile: string | null
+  onSelectFile: (file: string | null) => void
+}
+
+export function NextjsPreview({ conversion, selectedFile, onSelectFile }: NextjsPreviewProps) {
   const [activeTab, setActiveTab] = useState("preview")
+  const [fileTree, setFileTree] = useState<TreeItem[]>([])
+  const [copySuccess, setCopySuccess] = useState<string | null>(null)
+
+  // Generate file tree from conversion files
+  useEffect(() => {
+    if (conversion?.generatedFiles) {
+      const tree = buildFileTree(conversion.generatedFiles)
+      setFileTree(tree)
+
+      // Select the first file by default if none is selected
+      if (!selectedFile && conversion.generatedFiles.length > 0) {
+        onSelectFile(conversion.generatedFiles[0].path)
+      }
+    }
+  }, [conversion, selectedFile, onSelectFile])
+
+  // Build file tree from flat file list
+  const buildFileTree = (files: { path: string; content: string; type: string }[]) => {
+    const tree: Record<string, TreeItem> = {}
+
+    // Sort files to ensure directories come before files
+    const sortedFiles = [...files].sort((a, b) => a.path.localeCompare(b.path))
+
+    sortedFiles.forEach((file) => {
+      const parts = file.path.split("/")
+      let currentPath = ""
+      let currentLevel = tree
+
+      parts.forEach((part, index) => {
+        const isFile = index === parts.length - 1
+        const fullPath = currentPath ? `${currentPath}/${part}` : part
+        currentPath = fullPath
+
+        if (isFile) {
+          if (!currentLevel[part]) {
+            currentLevel[part] = {
+              id: fullPath,
+              name: part,
+              icon: getFileIcon(part),
+              children: [],
+            }
+          }
+        } else {
+          if (!currentLevel[part]) {
+            currentLevel[part] = {
+              id: fullPath,
+              name: part,
+              icon: <FolderIcon className="h-4 w-4 text-muted-foreground" />,
+              children: {},
+            }
+          }
+          currentLevel = currentLevel[part].children as Record<string, TreeItem>
+        }
+      })
+    })
+
+    // Convert the tree object to an array structure
+    const convertToArray = (obj: Record<string, TreeItem>): TreeItem[] => {
+      return Object.values(obj).map((item) => {
+        if (item.children && typeof item.children === "object" && !Array.isArray(item.children)) {
+          item.children = convertToArray(item.children as Record<string, TreeItem>)
+        }
+        return item
+      })
+    }
+
+    return convertToArray(tree)
+  }
+
+  // Get icon based on file extension
+  const getFileIcon = (filename: string) => {
+    const ext = filename.split(".").pop()?.toLowerCase()
+
+    switch (ext) {
+      case "tsx":
+      case "jsx":
+        return <FileIcon className="h-4 w-4 text-blue-500" />
+      case "css":
+        return <FileIcon className="h-4 w-4 text-purple-500" />
+      case "js":
+      case "ts":
+        return <FileIcon className="h-4 w-4 text-yellow-500" />
+      case "json":
+        return <FileIcon className="h-4 w-4 text-green-500" />
+      default:
+        return <FileIcon className="h-4 w-4 text-muted-foreground" />
+    }
+  }
+
+  // Get selected file content
+  const getSelectedFileContent = () => {
+    if (!conversion?.generatedFiles || !selectedFile) return null
+
+    const file = conversion.generatedFiles.find((f) => f.path === selectedFile)
+    return file?.content || null
+  }
+
+  // Copy file content to clipboard
+  const copyToClipboard = async () => {
+    const content = getSelectedFileContent()
+    if (content) {
+      try {
+        await navigator.clipboard.writeText(content)
+        setCopySuccess("Copied!")
+        setTimeout(() => setCopySuccess(null), 2000)
+      } catch (err) {
+        setCopySuccess("Failed to copy")
+        setTimeout(() => setCopySuccess(null), 2000)
+      }
+    }
+  }
+
+  // Download all files as zip
+  const downloadFiles = () => {
+    // In a real implementation, this would create a zip file with all the generated files
+    alert("This feature would download all generated files as a zip archive.")
+  }
 
   return (
     <Card className="h-full">
@@ -17,127 +144,337 @@ export function NextjsPreview() {
           <CardDescription>Preview the generated Next.js code</CardDescription>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" className="gap-1">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1"
+            onClick={copyToClipboard}
+            disabled={!selectedFile || !getSelectedFileContent()}
+          >
             <CopyIcon className="h-4 w-4" />
-            Copy
+            {copySuccess || "Copy"}
           </Button>
-          <Button variant="outline" size="sm" className="gap-1">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1"
+            onClick={downloadFiles}
+            disabled={!conversion?.generatedFiles?.length}
+          >
             <DownloadIcon className="h-4 w-4" />
             Download
           </Button>
         </div>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="preview" className="w-full">
+        {conversion?.status === "failed" && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Conversion Failed</AlertTitle>
+            <AlertDescription>{conversion.error || "An error occurred during conversion"}</AlertDescription>
+          </Alert>
+        )}
+
+        <Tabs defaultValue="preview" className="w-full" onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="preview">Preview</TabsTrigger>
-            <TabsTrigger value="jsx">JSX</TabsTrigger>
-            <TabsTrigger value="css">CSS</TabsTrigger>
-            <TabsTrigger value="api">API</TabsTrigger>
+            <TabsTrigger value="files">Files</TabsTrigger>
+            <TabsTrigger value="code">Code</TabsTrigger>
+            <TabsTrigger value="structure">Structure</TabsTrigger>
           </TabsList>
           <TabsContent value="preview" className="mt-4">
             <div className="rounded-md border bg-muted/40 p-4 h-[500px] flex items-center justify-center">
-              <div className="text-center space-y-4">
-                <img
-                  src="/placeholder.svg?height=200&width=300"
-                  alt="Site preview placeholder"
-                  className="mx-auto rounded-md"
-                />
-                <p className="text-muted-foreground">Enter a URL and click "Convert" to generate a preview</p>
+              {conversion?.status === "completed" ? (
+                <div className="text-center space-y-4">
+                  <div className="bg-white p-6 rounded-lg shadow-md max-w-md mx-auto">
+                    <h2 className="text-xl font-semibold mb-4">Next.js Code Generated Successfully!</h2>
+                    <p className="text-muted-foreground mb-4">
+                      Your website has been converted to Next.js code. You can view the files in the "Files" tab and
+                      explore the code in the "Code" tab.
+                    </p>
+                    <div className="flex justify-center">
+                      <Button onClick={() => setActiveTab("files")}>View Files</Button>
+                    </div>
+                  </div>
+                </div>
+              ) : conversion?.status === "processing" ? (
+                <div className="text-center space-y-4">
+                  <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto"></div>
+                  <p className="text-muted-foreground">Processing your website conversion...</p>
+                </div>
+              ) : (
+                <div className="text-center space-y-4">
+                  <img
+                    src="/placeholder.svg?height=200&width=300"
+                    alt="Site preview placeholder"
+                    className="mx-auto rounded-md"
+                  />
+                  <p className="text-muted-foreground">Enter a URL and click "Convert" to generate Next.js code</p>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+          <TabsContent value="files" className="mt-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[500px]">
+              <div className="rounded-md border bg-muted/40 p-4 overflow-auto">
+                <h3 className="text-sm font-medium mb-2">File Explorer</h3>
+                {fileTree.length > 0 ? (
+                  <ScrollArea className="h-[450px]">
+                    <Tree items={fileTree} onSelectItem={(item) => onSelectFile(item.id as string)} />
+                  </ScrollArea>
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <p className="text-muted-foreground text-sm">No files generated yet</p>
+                  </div>
+                )}
+              </div>
+              <div className="rounded-md border bg-muted p-4 col-span-2 overflow-auto">
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="text-sm font-medium">{selectedFile || "No file selected"}</h3>
+                  {selectedFile && (
+                    <Button variant="ghost" size="sm" onClick={copyToClipboard}>
+                      <CopyIcon className="h-4 w-4 mr-1" />
+                      {copySuccess || "Copy"}
+                    </Button>
+                  )}
+                </div>
+                <ScrollArea className="h-[450px] w-full">
+                  {getSelectedFileContent() ? (
+                    <pre className="text-sm text-muted-foreground whitespace-pre-wrap">{getSelectedFileContent()}</pre>
+                  ) : (
+                    <div className="flex items-center justify-center h-full">
+                      <p className="text-muted-foreground text-sm">
+                        {conversion?.generatedFiles?.length
+                          ? "Select a file from the explorer"
+                          : "No files generated yet"}
+                      </p>
+                    </div>
+                  )}
+                </ScrollArea>
               </div>
             </div>
           </TabsContent>
-          <TabsContent value="jsx" className="mt-4">
+          <TabsContent value="code" className="mt-4">
             <div className="rounded-md border bg-muted p-4 h-[500px] overflow-auto">
-              <pre className="text-sm text-muted-foreground">
-                {`// app/page.tsx
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, 
-         CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+              <ScrollArea className="h-full">
+                {conversion?.status === "completed" ? (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-semibold mb-2">App Structure</h3>
+                      <pre className="text-sm text-muted-foreground bg-muted-foreground/10 p-4 rounded-md">
+                        {`${
+                          conversion.options?.framework === "nextjs-app"
+                            ? `app/
+├── layout.tsx       # Root layout with metadata
+├── page.tsx         # Home page component
+├── globals.css      # Global styles
+└── api/
+    └── contact/
+        └── route.ts # API route handler for contact form`
+                            : conversion.options?.framework === "nextjs-pages"
+                              ? `pages/
+├── _app.tsx         # Custom App component
+├── _document.tsx    # Custom Document component
+├── index.tsx        # Home page component
+└── api/
+    └── contact.ts   # API endpoint for contact form
 
-export default function Home() {
-  return (
-    <div className="container mx-auto py-12">
-      <h1 className="text-4xl font-bold mb-8">
-        Welcome to TooliQ
-      </h1>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Feature 1</CardTitle>
-            <CardDescription>
-              Description of Feature 1
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p>Main content goes here</p>
-          </CardContent>
-          <CardFooter>
-            <Button>Learn More</Button>
-          </CardFooter>
-        </Card>
-        
-        {/* Additional cards would be here */}
-        
-      </div>
-    </div>
-  )
-}`}
-              </pre>
+styles/
+└── globals.css      # Global styles`
+                              : `src/
+├── App.tsx          # Main App component
+├── index.tsx        # Entry point
+└── index.css        # Global styles`
+                        }
+
+components/
+├── header.tsx       # Header component
+├── footer.tsx       # Footer component
+${conversion.options?.framework === "nextjs-app" ? "└── [section].tsx     # Section components" : "└── [section].jsx     # Section components"}
+
+${conversion.options?.cssFramework === "tailwind" ? "tailwind.config.js    # Tailwind configuration" : ""}`}
+                      </pre>
+                    </div>
+
+                    <div>
+                      <h3 className="text-lg font-semibold mb-2">Key Features</h3>
+                      <ul className="space-y-2 list-disc list-inside text-muted-foreground">
+                        <li>
+                          <span className="font-medium text-foreground">Framework:</span>{" "}
+                          {conversion.options?.framework === "nextjs-app"
+                            ? "Next.js with App Router"
+                            : conversion.options?.framework === "nextjs-pages"
+                              ? "Next.js with Pages Router"
+                              : "React"}
+                        </li>
+                        <li>
+                          <span className="font-medium text-foreground">CSS Framework:</span>{" "}
+                          {conversion.options?.cssFramework === "tailwind"
+                            ? "Tailwind CSS"
+                            : conversion.options?.cssFramework === "css-modules"
+                              ? "CSS Modules"
+                              : "Styled Components"}
+                        </li>
+                        <li>
+                          <span className="font-medium text-foreground">Language:</span>{" "}
+                          {conversion.options?.useTypeScript ? "TypeScript" : "JavaScript"}
+                        </li>
+                        <li>
+                          <span className="font-medium text-foreground">Components:</span>{" "}
+                          {conversion.options?.components === "shadcn" ? "shadcn/ui" : conversion.options?.components}
+                        </li>
+                        {conversion.options?.useServerComponents && (
+                          <li>
+                            <span className="font-medium text-foreground">Server Components:</span> Enabled
+                          </li>
+                        )}
+                        {conversion.options?.useRouteHandlers && (
+                          <li>
+                            <span className="font-medium text-foreground">API Routes:</span> Included
+                          </li>
+                        )}
+                      </ul>
+                    </div>
+
+                    <div>
+                      <h3 className="text-lg font-semibold mb-2">Usage Instructions</h3>
+                      <div className="bg-muted-foreground/10 p-4 rounded-md space-y-4">
+                        <p className="text-muted-foreground">To use this code:</p>
+                        <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
+                          <li>Download the generated files using the "Download" button</li>
+                          <li>
+                            Create a new Next.js project:{" "}
+                            <code className="bg-muted-foreground/20 px-1 py-0.5 rounded text-xs">
+                              npx create-next-app my-project
+                            </code>
+                          </li>
+                          <li>Replace or add the generated files to your project</li>
+                          <li>
+                            Install dependencies:{" "}
+                            <code className="bg-muted-foreground/20 px-1 py-0.5 rounded text-xs">npm install</code>
+                          </li>
+                          <li>
+                            Start the development server:{" "}
+                            <code className="bg-muted-foreground/20 px-1 py-0.5 rounded text-xs">npm run dev</code>
+                          </li>
+                        </ol>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <p className="text-muted-foreground">
+                      {conversion?.status === "processing"
+                        ? "Processing your website conversion..."
+                        : "Enter a URL and click 'Convert' to generate Next.js code"}
+                    </p>
+                  </div>
+                )}
+              </ScrollArea>
             </div>
           </TabsContent>
-          <TabsContent value="css" className="mt-4">
-            <div className="rounded-md border bg-muted p-4 h-[500px] overflow-auto">
-              <pre className="text-sm text-muted-foreground">
-                {`/* tailwind.config.js */
-module.exports = {
-  content: [
-    './app/**/*.{js,ts,jsx,tsx,mdx}',
-    './components/**/*.{js,ts,jsx,tsx,mdx}',
-  ],
-  theme: {
-    extend: {
-      colors: {
-        primary: '#7C3AED',
-        secondary: '#4F46E5',
-      },
-      fontFamily: {
-        sans: ['Inter', 'sans-serif'],
-      },
-    },
-  },
-  plugins: [],
-}`}
-              </pre>
-            </div>
-          </TabsContent>
-          <TabsContent value="api" className="mt-4">
-            <div className="rounded-md border bg-muted p-4 h-[500px] overflow-auto">
-              <pre className="text-sm text-muted-foreground">
-                {`// app/api/contact/route.ts
-import { NextResponse } from 'next/server'
+          <TabsContent value="structure" className="mt-4">
+            <div className="rounded-md border bg-muted/40 p-4 h-[500px] overflow-auto">
+              {conversion?.status === "completed" ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4">Component Structure</h3>
+                    <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
+                      <div className="border-b pb-2 mb-2">
+                        <div className="flex items-center">
+                          <div className="w-4 h-4 bg-blue-500 rounded-full mr-2"></div>
+                          <span className="font-medium">Layout</span>
+                        </div>
+                        <div className="ml-6 mt-2">
+                          <div className="flex items-center">
+                            <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                            <span>Header</span>
+                          </div>
+                          <div className="flex items-center mt-1">
+                            <div className="w-3 h-3 bg-purple-500 rounded-full mr-2"></div>
+                            <span>Main Content</span>
+                          </div>
+                          <div className="ml-5 mt-1">
+                            <div className="flex items-center">
+                              <div className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></div>
+                              <span>Hero Section</span>
+                            </div>
+                            <div className="flex items-center mt-1">
+                              <div className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></div>
+                              <span>Features Section</span>
+                            </div>
+                            <div className="flex items-center mt-1">
+                              <div className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></div>
+                              <span>Testimonials Section</span>
+                            </div>
+                            <div className="flex items-center mt-1">
+                              <div className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></div>
+                              <span>Contact Section</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center mt-1">
+                            <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
+                            <span>Footer</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
 
-export async function POST(req: Request) {
-  const body = await req.json()
-  
-  // Example validation
-  if (!body.email || !body.message) {
-    return NextResponse.json(
-      { error: 'Email and message are required' },
-      { status: 400 }
-    )
-  }
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4">Page Structure</h3>
+                    <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
+                      <div className="space-y-3">
+                        <div className="flex items-center">
+                          <div className="w-4 h-4 bg-blue-500 rounded-full mr-2"></div>
+                          <span className="font-medium">Pages</span>
+                        </div>
+                        <div className="ml-6 space-y-2">
+                          <div className="flex items-center">
+                            <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                            <span>Home Page</span>
+                          </div>
+                          <div className="flex items-center">
+                            <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                            <span>About Page (placeholder)</span>
+                          </div>
+                          <div className="flex items-center">
+                            <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                            <span>Services Page (placeholder)</span>
+                          </div>
+                          <div className="flex items-center">
+                            <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                            <span>Contact Page (placeholder)</span>
+                          </div>
+                        </div>
+                      </div>
 
-  // Process the contact form submission
-  // This would typically involve sending an email, 
-  // storing in a database, etc.
-  
-  return NextResponse.json(
-    { success: true },
-    { status: 200 }
-  )
-}`}
-              </pre>
+                      {conversion.options?.useRouteHandlers && (
+                        <div className="mt-4 pt-4 border-t">
+                          <div className="flex items-center">
+                            <div className="w-4 h-4 bg-purple-500 rounded-full mr-2"></div>
+                            <span className="font-medium">API Routes</span>
+                          </div>
+                          <div className="ml-6 mt-2">
+                            <div className="flex items-center">
+                              <div className="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div>
+                              <span>Contact Form Handler</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <p className="text-muted-foreground">
+                    {conversion?.status === "processing"
+                      ? "Processing your website conversion..."
+                      : "Enter a URL and click 'Convert' to generate Next.js code"}
+                  </p>
+                </div>
+              )}
             </div>
           </TabsContent>
         </Tabs>
