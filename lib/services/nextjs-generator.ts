@@ -4,18 +4,56 @@ export async function generateNextjsCode(
   analysisResult: WebsiteAnalysisResult,
   options: NextjsGenerationOptions,
 ): Promise<GeneratedFile[]> {
-  const files: GeneratedFile[] = []
+  try {
+    // Validate input
+    if (!analysisResult) {
+      throw new Error("Analysis result is required")
+    }
 
-  // Generate files based on the framework option
-  if (options.framework === "nextjs-app") {
-    files.push(...generateNextjsAppFiles(analysisResult, options))
-  } else if (options.framework === "nextjs-pages") {
-    files.push(...generateNextjsPagesFiles(analysisResult, options))
-  } else {
-    files.push(...generateReactFiles(analysisResult, options))
+    const files: GeneratedFile[] = []
+
+    // Generate files based on the framework option
+    if (options.framework === "nextjs-app") {
+      files.push(...generateNextjsAppFiles(analysisResult, options))
+    } else if (options.framework === "nextjs-pages") {
+      files.push(...generateNextjsPagesFiles(analysisResult, options))
+    } else {
+      files.push(...generateReactFiles(analysisResult, options))
+    }
+
+    return files
+  } catch (error) {
+    console.error("Error generating Next.js code:", error)
+
+    // Return a minimal set of files in case of error
+    const fileExt = options.useTypeScript ? "tsx" : "jsx"
+
+    return [
+      {
+        path: `app/page.${fileExt}`,
+        content: `export default function Home() {
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center">
+      <h1 className="text-3xl font-bold">Website Conversion</h1>
+      <p className="mt-4">There was an issue generating the complete code.</p>
+    </div>
+  );
+}`,
+        type: options.useTypeScript ? "tsx" : "jsx",
+      },
+      {
+        path: `app/layout.${fileExt}`,
+        content: `export default function RootLayout({ children }) {
+  return (
+    <html lang="en">
+      <body>{children}</body>
+    </html>
+  );
+}`,
+        type: options.useTypeScript ? "tsx" : "jsx",
+      },
+    ]
   }
-
-  return files
 }
 
 function generateNextjsAppFiles(

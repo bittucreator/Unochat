@@ -34,6 +34,13 @@ export async function convertWebsiteToNextjs(
   const userId = session?.user?.id
 
   try {
+    // Validate URL
+    try {
+      new URL(url)
+    } catch (error) {
+      throw new Error("Invalid URL. Please enter a valid URL including http:// or https://")
+    }
+
     // Merge default options with provided options
     const mergedOptions = { ...defaultOptions, ...options }
 
@@ -67,10 +74,28 @@ export async function convertWebsiteToNextjs(
     }
 
     // Analyze the website
-    const analysisResult = await analyzeWebsite(url)
+    let analysisResult
+    try {
+      analysisResult = await analyzeWebsite(url)
+      if (!analysisResult) {
+        throw new Error("Website analysis failed to return data")
+      }
+    } catch (analysisError) {
+      console.error("Error analyzing website:", analysisError)
+      throw new Error(`Website analysis failed: ${(analysisError as Error).message || "Unknown error"}`)
+    }
 
     // Generate Next.js code
-    const generatedFiles = await generateNextjsCode(analysisResult, mergedOptions)
+    let generatedFiles
+    try {
+      generatedFiles = await generateNextjsCode(analysisResult, mergedOptions)
+      if (!generatedFiles || generatedFiles.length === 0) {
+        throw new Error("Code generation failed to produce files")
+      }
+    } catch (generationError) {
+      console.error("Error generating Next.js code:", generationError)
+      throw new Error(`Code generation failed: ${(generationError as Error).message || "Unknown error"}`)
+    }
 
     // Update conversion record in the database if user is authenticated
     if (userId && conversionRecord) {
@@ -120,7 +145,7 @@ export async function convertWebsiteToNextjs(
       url,
       status: "failed",
       createdAt: new Date(),
-      error: (error as Error).message,
+      error: (error as Error).message || "An unknown error occurred during conversion",
     }
   }
 }

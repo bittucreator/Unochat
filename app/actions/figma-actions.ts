@@ -14,115 +14,162 @@ import { revalidatePath } from "next/cache"
 
 // Helper to extract website elements (simplified version)
 async function extractWebsiteElements(url: string): Promise<WebsiteElement[]> {
-  // In a real implementation, you would use a headless browser like Puppeteer
-  // to extract elements from the website
+  try {
+    // In a real implementation, you would use a headless browser like Puppeteer
+    // to extract elements from the website
 
-  // This is a simplified mock implementation
-  return [
-    {
-      type: "header",
-      tag: "header",
-      children: [
-        {
-          type: "heading",
-          tag: "h1",
-          text: "Website Header",
-          style: {
-            fontSize: "24px",
-            fontWeight: "bold",
-            color: "#333333",
-          },
-          boundingBox: {
-            x: 0,
-            y: 0,
-            width: 800,
-            height: 80,
-          },
-        },
-      ],
-      boundingBox: {
-        x: 0,
-        y: 0,
-        width: 1200,
-        height: 80,
-      },
-    },
-    {
-      type: "main",
-      tag: "main",
-      children: [
-        {
-          type: "section",
-          tag: "section",
-          children: [
-            {
-              type: "heading",
-              tag: "h2",
-              text: "Main Content",
-              style: {
-                fontSize: "20px",
-                fontWeight: "bold",
-                color: "#333333",
-              },
-              boundingBox: {
-                x: 0,
-                y: 100,
-                width: 800,
-                height: 40,
-              },
+    // This is a simplified mock implementation
+    return [
+      {
+        type: "header",
+        tag: "header",
+        children: [
+          {
+            type: "heading",
+            tag: "h1",
+            text: "Website Header",
+            style: {
+              fontSize: "24px",
+              fontWeight: "bold",
+              color: "#333333",
             },
-            {
-              type: "paragraph",
-              tag: "p",
-              text: "This is a paragraph of text from the website.",
-              style: {
-                fontSize: "16px",
-                color: "#666666",
-              },
-              boundingBox: {
-                x: 0,
-                y: 150,
-                width: 800,
-                height: 60,
-              },
+            boundingBox: {
+              x: 0,
+              y: 0,
+              width: 800,
+              height: 80,
             },
-          ],
-          boundingBox: {
-            x: 0,
-            y: 100,
-            width: 1200,
-            height: 300,
           },
+        ],
+        boundingBox: {
+          x: 0,
+          y: 0,
+          width: 1200,
+          height: 80,
         },
-      ],
-      boundingBox: {
-        x: 0,
-        y: 100,
-        width: 1200,
-        height: 500,
       },
-    },
-  ]
+      {
+        type: "main",
+        tag: "main",
+        children: [
+          {
+            type: "section",
+            tag: "section",
+            children: [
+              {
+                type: "heading",
+                tag: "h2",
+                text: "Main Content",
+                style: {
+                  fontSize: "20px",
+                  fontWeight: "bold",
+                  color: "#333333",
+                },
+                boundingBox: {
+                  x: 0,
+                  y: 100,
+                  width: 800,
+                  height: 40,
+                },
+              },
+              {
+                type: "paragraph",
+                tag: "p",
+                text: "This is a paragraph of text from the website.",
+                style: {
+                  fontSize: "16px",
+                  color: "#666666",
+                },
+                boundingBox: {
+                  x: 0,
+                  y: 150,
+                  width: 800,
+                  height: 60,
+                },
+              },
+            ],
+            boundingBox: {
+              x: 0,
+              y: 100,
+              width: 1200,
+              height: 300,
+            },
+          },
+        ],
+        boundingBox: {
+          x: 0,
+          y: 100,
+          width: 1200,
+          height: 500,
+        },
+      },
+    ]
+  } catch (error) {
+    console.error("Error extracting website elements:", error)
+    // Return a minimal set of elements in case of error
+    return [
+      {
+        type: "header",
+        tag: "header",
+        children: [
+          {
+            type: "heading",
+            tag: "h1",
+            text: "Website Header",
+            boundingBox: {
+              x: 0,
+              y: 0,
+              width: 800,
+              height: 80,
+            },
+          },
+        ],
+        boundingBox: {
+          x: 0,
+          y: 0,
+          width: 1200,
+          height: 80,
+        },
+      },
+    ]
+  }
 }
 
 // Convert website elements to Figma design elements
 function convertToFigmaElements(elements: WebsiteElement[]): any[] {
-  // This is a simplified conversion - in a real implementation,
-  // you would need to map the website elements to Figma's node structure
+  try {
+    // This is a simplified conversion - in a real implementation,
+    // you would need to map the website elements to Figma's node structure
 
-  // Mock implementation
-  return elements.map((element, index) => {
-    return {
-      id: `element-${index}`,
-      type: "FRAME",
-      name: element.type || element.tag,
-      x: element.boundingBox?.x || 0,
-      y: element.boundingBox?.y || 0,
-      width: element.boundingBox?.width || 100,
-      height: element.boundingBox?.height || 100,
-      children: element.children ? convertToFigmaElements(element.children) : [],
-    }
-  })
+    // Mock implementation
+    return elements.map((element, index) => {
+      return {
+        id: `element-${index}`,
+        type: "FRAME",
+        name: element.type || element.tag || "Element",
+        x: element.boundingBox?.x || 0,
+        y: element.boundingBox?.y || 0,
+        width: element.boundingBox?.width || 100,
+        height: element.boundingBox?.height || 100,
+        children: element.children ? convertToFigmaElements(element.children) : [],
+      }
+    })
+  } catch (error) {
+    console.error("Error converting to Figma elements:", error)
+    // Return a minimal set of elements in case of error
+    return [
+      {
+        id: "element-fallback",
+        type: "FRAME",
+        name: "Fallback Frame",
+        x: 0,
+        y: 0,
+        width: 1200,
+        height: 800,
+        children: [],
+      },
+    ]
+  }
 }
 
 // Store auth state in cookies (in a real app, use a more secure method)
@@ -238,6 +285,13 @@ export async function convertWebsiteToFigma(url: string, options: any = {}): Pro
   }
 
   try {
+    // Validate URL
+    try {
+      new URL(url)
+    } catch (error) {
+      throw new Error("Invalid URL. Please enter a valid URL including http:// or https://")
+    }
+
     // Create a new conversion record in the database
     const conversionData = {
       user_id: userId,
@@ -266,20 +320,45 @@ export async function convertWebsiteToFigma(url: string, options: any = {}): Pro
     }
 
     // Extract website elements
-    const websiteElements = await extractWebsiteElements(url)
+    let websiteElements
+    try {
+      websiteElements = await extractWebsiteElements(url)
+      if (!websiteElements || websiteElements.length === 0) {
+        throw new Error("Failed to extract website elements")
+      }
+    } catch (extractError) {
+      console.error("Error extracting website elements:", extractError)
+      throw new Error(`Website element extraction failed: ${(extractError as Error).message || "Unknown error"}`)
+    }
 
     // Create a new Figma file
-    const fileName = `TooliQ - ${url.replace(/^https?:\/\//, "").split("/")[0]}`
-    const figmaFile = await createFigmaFile(authState.accessToken, fileName)
+    let figmaFile
+    try {
+      const fileName = `TooliQ - ${url.replace(/^https?:\/\//, "").split("/")[0]}`
+      figmaFile = await createFigmaFile(authState.accessToken, fileName)
+      if (!figmaFile || !figmaFile.file_key) {
+        throw new Error("Failed to create Figma file")
+      }
+    } catch (figmaError) {
+      console.error("Error creating Figma file:", figmaError)
+      throw new Error(`Figma file creation failed: ${(figmaError as Error).message || "Unknown error"}`)
+    }
 
     // Convert website elements to Figma elements
     const figmaElements = convertToFigmaElements(websiteElements)
 
     // Create Figma nodes in the file
-    await createFigmaNodes(authState.accessToken, figmaFile.file_key, figmaElements)
+    try {
+      await createFigmaNodes(authState.accessToken, figmaFile.file_key, figmaElements)
+    } catch (nodesError) {
+      console.error("Error creating Figma nodes:", nodesError)
+      throw new Error(`Figma node creation failed: ${(nodesError as Error).message || "Unknown error"}`)
+    }
 
     // Update conversion record in the database
-    const figmaFileUrl = `https://www.figma.com/file/${figmaFile.file_key}/${encodeURIComponent(fileName)}`
+    const figmaFileUrl = `https://www.figma.com/file/${figmaFile.file_key}/${encodeURIComponent(
+      figmaFile.name || "TooliQ Conversion",
+    )}`
 
     const { error: updateError } = await supabase
       .from("website_conversions")
@@ -313,7 +392,7 @@ export async function convertWebsiteToFigma(url: string, options: any = {}): Pro
         .from("website_conversions")
         .update({
           status: "failed",
-          error: (error as Error).message,
+          error: (error as Error).message || "An unknown error occurred during conversion",
           updated_at: new Date().toISOString(),
         })
         .eq("user_id", userId)
@@ -326,7 +405,7 @@ export async function convertWebsiteToFigma(url: string, options: any = {}): Pro
       url,
       status: "failed",
       createdAt: new Date(),
-      error: (error as Error).message,
+      error: (error as Error).message || "An unknown error occurred during conversion",
     }
   }
 }

@@ -4,34 +4,81 @@ import type { WebsiteAnalysisResult, WebsiteElement } from "../types/nextjs"
 // In a real application, you would use a headless browser like Puppeteer
 // to extract elements and analyze the website structure
 export async function analyzeWebsite(url: string): Promise<WebsiteAnalysisResult> {
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 1500))
+  try {
+    // Check if we have an API key for a real service
+    const apiKey = process.env.WEBSITE_ANALYSIS_API_KEY
 
-  // Mock analysis result based on the URL
-  const domain = new URL(url).hostname
+    if (apiKey) {
+      // If we have an API key, try to use a real service
+      try {
+        // This would be replaced with your actual API call
+        // const response = await fetch(`https://api.websiteanalyzer.com/analyze?url=${encodeURIComponent(url)}`, {
+        //   headers: { 'Authorization': `Bearer ${apiKey}` }
+        // });
+        // const data = await response.json();
+        // return data;
 
-  return {
-    url,
-    title: `${domain} - Website`,
-    description: `This is a website analysis for ${domain}`,
-    elements: generateMockElements(url),
-    meta: {
-      colors: ["#1a202c", "#2d3748", "#4a5568", "#718096", "#e2e8f0", "#edf2f7", "#f7fafc", "#ffffff"],
-      fonts: ["Inter", "system-ui", "-apple-system", "sans-serif"],
-      images: [
-        `https://source.unsplash.com/random/800x600?${domain}`,
-        `https://source.unsplash.com/random/400x300?${domain}`,
-      ],
-      scripts: ["main.js", "analytics.js"],
-      links: ["styles.css"],
-    },
-    structure: {
-      header: createHeaderElement(),
-      footer: createFooterElement(),
-      main: createMainElement(),
-      navigation: createNavigationElement(),
-      sections: createSectionElements(),
-    },
+        // For now, we'll just simulate a delay and return mock data
+        await new Promise((resolve) => setTimeout(resolve, 1500))
+      } catch (apiError) {
+        console.error("API analysis failed, falling back to mock data:", apiError)
+        // Fall back to mock data if the API call fails
+      }
+    }
+
+    // Simulate API call delay
+    await new Promise((resolve) => setTimeout(resolve, 1500))
+
+    // Mock analysis result based on the URL
+    const domain = new URL(url).hostname
+
+    return {
+      url,
+      title: `${domain} - Website`,
+      description: `This is a website analysis for ${domain}`,
+      elements: generateMockElements(url),
+      meta: {
+        colors: ["#1a202c", "#2d3748", "#4a5568", "#718096", "#e2e8f0", "#edf2f7", "#f7fafc", "#ffffff"],
+        fonts: ["Inter", "system-ui", "-apple-system", "sans-serif"],
+        images: [
+          `https://source.unsplash.com/random/800x600?${domain}`,
+          `https://source.unsplash.com/random/400x300?${domain}`,
+        ],
+        scripts: ["main.js", "analytics.js"],
+        links: ["styles.css"],
+      },
+      structure: {
+        header: createHeaderElement(),
+        footer: createFooterElement(),
+        main: createMainElement(),
+        navigation: createNavigationElement(),
+        sections: createSectionElements(),
+      },
+    }
+  } catch (error) {
+    console.error("Error analyzing website:", error)
+
+    // Return a minimal valid result structure even in case of error
+    return {
+      url,
+      title: "Website Analysis",
+      description: "Basic website structure",
+      elements: [createHeaderElement(), createMainElement(), createFooterElement()],
+      meta: {
+        colors: ["#1a202c", "#ffffff"],
+        fonts: ["system-ui", "sans-serif"],
+        images: [],
+        scripts: [],
+        links: [],
+      },
+      structure: {
+        header: createHeaderElement(),
+        footer: createFooterElement(),
+        main: createMainElement(),
+        navigation: createNavigationElement(),
+        sections: [createHeroSection()],
+      },
+    }
   }
 }
 

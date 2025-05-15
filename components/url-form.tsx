@@ -5,86 +5,95 @@ import type React from "react"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { LinkIcon, Loader2 } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { AlertCircle } from "lucide-react"
 import type { FigmaAuthState } from "@/lib/types/figma"
 
 interface UrlFormProps {
-  authState: FigmaAuthState
-  onSubmit?: (url: string) => Promise<void>
-  isLoading?: boolean
-  conversionType?: "figma" | "nextjs"
+  onSubmit: (url: string) => Promise<void>
+  isLoading: boolean
+  authState?: FigmaAuthState
+  title?: string
+  description?: string
+  buttonText?: string
+  placeholder?: string
+  className?: string
 }
 
-export function UrlForm({ authState, onSubmit, isLoading = false, conversionType = "figma" }: UrlFormProps) {
+export function UrlForm({
+  onSubmit,
+  isLoading,
+  authState = { isAuthenticated: true },
+  title = "Enter a URL",
+  description = "Enter the URL of the website you want to convert",
+  buttonText = "Convert",
+  placeholder = "https://example.com",
+  className,
+}: UrlFormProps) {
   const [url, setUrl] = useState("")
-  const { toast } = useToast()
+  const [error, setError] = useState<string | null>(null)
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    setError(null)
 
+    // Basic URL validation
     if (!url) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Please enter a valid URL",
-      })
+      setError("Please enter a URL")
       return
     }
 
-    // Validate URL
+    // Check if URL has http:// or https:// prefix
+    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+      setError("URL must start with http:// or https://")
+      return
+    }
+
     try {
+      // Additional validation
       new URL(url)
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Invalid URL",
-        description: "Please enter a valid URL including http:// or https://",
-      })
-      return
-    }
-
-    // Check if authenticated for Figma conversion
-    if (conversionType === "figma" && !authState.isAuthenticated) {
-      toast({
-        variant: "destructive",
-        title: "Authentication Required",
-        description: "Please connect to Figma first to enable website to Figma conversion.",
-      })
-      return
-    }
-
-    // Call the onSubmit handler if provided
-    if (onSubmit) {
       await onSubmit(url)
+    } catch (error) {
+      console.error("Error submitting URL:", error)
+      setError((error as Error).message || "An error occurred while processing your request")
     }
   }
 
-  // Only check auth state for Figma conversions
-  const isButtonDisabled = isLoading || (conversionType === "figma" && !authState.isAuthenticated)
-
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3">
-      <div className="relative flex-1">
-        <LinkIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          type="text"
-          placeholder="Enter website URL (e.g., https://example.com)"
-          className="pl-10"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-        />
-      </div>
-      <Button type="submit" disabled={isButtonDisabled}>
-        {isLoading ? (
-          <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Processing...
-          </>
-        ) : (
-          "Convert"
-        )}
-      </Button>
-    </form>
+    <Card className={className}>
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+        <CardDescription>{description}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          <div className="flex flex-col space-y-2">
+            <Input
+              type="url"
+              placeholder={placeholder}
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              required
+              className="w-full"
+              disabled={isLoading}
+            />
+          </div>
+          <Button type="submit" className="w-full" disabled={isLoading || !authState.isAuthenticated}>
+            {isLoading ? "Converting..." : buttonText}
+          </Button>
+        </form>
+      </CardContent>
+      <CardFooter className="flex justify-center text-sm text-muted-foreground">
+        {!authState.isAuthenticated && <p>You need to authenticate with the service before converting websites.</p>}
+      </CardFooter>
+    </Card>
   )
 }
