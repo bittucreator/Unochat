@@ -6,6 +6,7 @@ import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Paperclip, Loader2 } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 interface FileUploadProps {
   onFileUploaded: (fileData: { id: number; filename: string; contentType: string }) => void
@@ -89,16 +90,29 @@ export function FileUpload({ onFileUploaded, messageId }: FileUploadProps) {
         onChange={handleFileChange}
         accept="image/*,application/pdf,text/plain"
       />
-      <Button
-        variant="ghost"
-        size="icon"
-        type="button"
-        disabled={isUploading}
-        onClick={() => fileInputRef.current?.click()}
-        title="Attach file"
-      >
-        {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
-      </Button>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              type="button"
+              disabled={isUploading}
+              onClick={() => fileInputRef.current?.click()}
+              className="rounded-full h-8 w-8 hover:bg-pastel-lavender/30 dark:hover:bg-pastel-lilac/10"
+            >
+              {isUploading ? (
+                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+              ) : (
+                <Paperclip className="h-4 w-4 text-primary" />
+              )}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Attach file</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     </div>
   )
 }

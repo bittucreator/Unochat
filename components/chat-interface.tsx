@@ -6,12 +6,16 @@ import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Send, Loader2, AlertCircle } from "lucide-react"
+import { Send, Loader2, AlertCircle, Sparkles, Info, ImageIcon, FileText, Zap, Bot } from "lucide-react"
 import { FileUpload } from "./file-upload"
 import { FilePreview } from "./file-preview"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { ModelBadge } from "./model-badge"
 import { toast } from "@/hooks/use-toast"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Card, CardContent } from "@/components/ui/card"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 type Message = {
   id: number
@@ -26,9 +30,9 @@ type Message = {
 
 // Define available models
 const AVAILABLE_MODELS = [
-  { id: "azure-grok", name: "Grok 3 (Azure)" },
-  { id: "gpt-4o", name: "GPT-4o" },
-  { id: "gpt-3.5-turbo", name: "GPT-3.5 Turbo" },
+  { id: "azure-grok", name: "Grok 3 (Azure)", icon: <Zap className="h-4 w-4 mr-1.5" /> },
+  { id: "gpt-4o", name: "GPT-4o", icon: <Sparkles className="h-4 w-4 mr-1.5" /> },
+  { id: "gpt-3.5-turbo", name: "GPT-3.5 Turbo", icon: <Bot className="h-4 w-4 mr-1.5" /> },
 ]
 
 interface ChatInterfaceProps {
@@ -46,6 +50,7 @@ export function ChatInterface({ userId, initialConversationId }: ChatInterfacePr
   const [attachments, setAttachments] = useState<Array<{ id: number; filename: string; contentType: string }>>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [isWelcomePage, setIsWelcomePage] = useState(!initialConversationId)
+  const [isTyping, setIsTyping] = useState(false)
 
   // Load messages if conversation ID is provided
   useEffect(() => {
@@ -87,6 +92,11 @@ export function ChatInterface({ userId, initialConversationId }: ChatInterfacePr
     setAttachments((prev) => [...prev, fileData])
   }
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value)
+    setIsTyping(e.target.value.length > 0)
+  }
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
 
@@ -106,6 +116,7 @@ export function ChatInterface({ userId, initialConversationId }: ChatInterfacePr
     setMessages((prev) => [...prev, userMessage])
     setInput("")
     setAttachments([])
+    setIsTyping(false)
 
     try {
       // Format messages for API
@@ -171,19 +182,35 @@ export function ChatInterface({ userId, initialConversationId }: ChatInterfacePr
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden">
-      <header className="flex justify-end p-4">
-        <Button
-          variant="ghost"
-          className="bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 hover:bg-purple-200 dark:hover:bg-purple-800"
-        >
-          What is TooliQ?
-        </Button>
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-gradient-to-b from-pastel-lavender/10 to-white dark:from-gray-900 dark:to-gray-950">
+      <header className="flex justify-between items-center p-4 border-b border-pastel-lavender/30 dark:border-pastel-lilac/10 backdrop-blur-sm bg-white/50 dark:bg-gray-900/50">
+        <h1 className="text-lg font-medium text-primary/80 hidden sm:block">
+          {conversationId ? "Chat" : "Welcome to TooliQ"}
+        </h1>
+        <div className="flex items-center gap-2">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-xl border-pastel-lavender/50 dark:border-pastel-lilac/20 bg-white/80 dark:bg-gray-800/60"
+                >
+                  <Info className="h-4 w-4 mr-1.5 text-primary" />
+                  <span className="hidden sm:inline">About TooliQ</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Learn more about TooliQ</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
       </header>
 
-      <main className="flex-1 overflow-auto p-6">
+      <ScrollArea className="flex-1 p-4 sm:p-6">
         {error && (
-          <Alert variant="destructive" className="mb-4 max-w-3xl mx-auto">
+          <Alert variant="destructive" className="mb-4 max-w-3xl mx-auto animate-fade-in">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Error</AlertTitle>
             <AlertDescription>
@@ -194,101 +221,146 @@ export function ChatInterface({ userId, initialConversationId }: ChatInterfacePr
         )}
 
         {isWelcomePage ? (
-          <div className="max-w-3xl mx-auto">
-            <h1 className="text-3xl font-bold text-center text-purple-800 dark:text-purple-200 mb-8">
-              TooliQ is the best AI Chat ever made.
-            </h1>
+          <div className="max-w-3xl mx-auto animate-fade-in">
+            <Card className="border-pastel-lavender/30 dark:border-pastel-lilac/10 bg-white/80 dark:bg-gray-800/60 shadow-sm mb-8">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-center mb-6">
+                  <div className="bg-primary/10 p-3 rounded-full">
+                    <Sparkles className="text-primary h-8 w-8" />
+                  </div>
+                </div>
+                <h1 className="text-3xl font-bold text-center bg-gradient-to-r from-primary to-pastel-lilac bg-clip-text text-transparent mb-8">
+                  Welcome to TooliQ
+                </h1>
 
-            <div className="space-y-12">
-              <div>
-                <h2 className="text-xl font-semibold text-purple-700 dark:text-purple-300 mb-2">1. We're fast.</h2>
-                <p className="text-gray-700 dark:text-gray-300">
-                  We're 2x faster than ChatGPT, 10x faster than DeepSeek. You'll feel the difference - trust us.
-                </p>
-              </div>
+                <div className="space-y-8">
+                  <div className="flex items-start gap-4">
+                    <div className="bg-pastel-sky/30 dark:bg-pastel-sky/10 p-2 rounded-lg">
+                      <Zap className="h-5 w-5 text-pastel-sky" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-semibold text-pastel-lilac dark:text-pastel-lavender mb-2">
+                        Lightning Fast
+                      </h2>
+                      <p className="text-gray-700 dark:text-gray-300">
+                        We're 2x faster than ChatGPT, 10x faster than DeepSeek. You'll feel the difference - trust us.
+                      </p>
+                    </div>
+                  </div>
 
-              <div>
-                <h2 className="text-xl font-semibold text-purple-700 dark:text-purple-300 mb-2">
-                  2. We have every model you could want.
-                </h2>
-                <p className="text-gray-700 dark:text-gray-300">
-                  Want to use <span className="font-semibold">Grok 3</span> for code? We got you.
-                  <span className="font-semibold"> GPT-4o</span> for picture analysis? Of course.
-                  <span className="font-semibold"> GPT-3.5</span> for quick responses? Why not.
-                </p>
-                <p className="mt-2 text-gray-700 dark:text-gray-300">
-                  When new models come out, we make them available within hours of release.
-                </p>
-              </div>
+                  <div className="flex items-start gap-4">
+                    <div className="bg-pastel-mint/30 dark:bg-pastel-mint/10 p-2 rounded-lg">
+                      <Bot className="h-5 w-5 text-pastel-mint" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-semibold text-pastel-lilac dark:text-pastel-lavender mb-2">
+                        Multiple Models
+                      </h2>
+                      <p className="text-gray-700 dark:text-gray-300">
+                        Access <span className="font-semibold">Grok 3</span> for code,
+                        <span className="font-semibold"> GPT-4o</span> for images, and
+                        <span className="font-semibold"> GPT-3.5</span> for quick responses.
+                      </p>
+                    </div>
+                  </div>
 
-              <div>
-                <h2 className="text-xl font-semibold text-purple-700 dark:text-purple-300 mb-2">
-                  3. We're cheap. ($8/month)
-                </h2>
-                <p className="text-gray-700 dark:text-gray-300">
-                  We're less than half the price of ChatGPT or Claude, and we're MORE generous with limits. You get over
-                  1,500 messages per month!
-                </p>
-              </div>
+                  <div className="flex items-start gap-4">
+                    <div className="bg-pastel-peach/30 dark:bg-pastel-peach/10 p-2 rounded-lg">
+                      <ImageIcon className="h-5 w-5 text-pastel-peach" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-semibold text-pastel-lilac dark:text-pastel-lavender mb-2">
+                        File Sharing
+                      </h2>
+                      <p className="text-gray-700 dark:text-gray-300">
+                        Share images, PDFs, and text files directly in your conversations for instant analysis.
+                      </p>
+                    </div>
+                  </div>
 
-              <div>
-                <h2 className="text-xl font-semibold text-purple-700 dark:text-purple-300 mb-2">
-                  Whatcha waiting for?
-                </h2>
-                <p className="text-gray-700 dark:text-gray-300">
-                  Reply here to get started, or click the little "chat" icon up top to make a new chat. Or you can{" "}
-                  <a href="#" className="text-pink-600 hover:underline">
-                    check out the FAQ
-                  </a>
-                </p>
-              </div>
-            </div>
+                  <div className="flex items-start gap-4">
+                    <div className="bg-pastel-coral/30 dark:bg-pastel-coral/10 p-2 rounded-lg">
+                      <FileText className="h-5 w-5 text-pastel-coral" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-semibold text-pastel-lilac dark:text-pastel-lavender mb-2">
+                        Affordable
+                      </h2>
+                      <p className="text-gray-700 dark:text-gray-300">
+                        Just $8/month for unlimited access to all models and features. No hidden fees or usage limits.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         ) : (
           <div className="max-w-3xl mx-auto space-y-6">
-            {messages.map((message) => (
+            {messages.map((message, index) => (
               <div
                 key={message.id}
-                className={`p-4 rounded-lg ${
-                  message.role === "user"
-                    ? "bg-purple-100 dark:bg-purple-900 ml-auto max-w-[80%]"
-                    : "bg-gray-100 dark:bg-gray-800 mr-auto max-w-[80%]"
-                }`}
+                className={`flex ${message.role === "user" ? "justify-end" : "justify-start"} animate-slide-in`}
+                style={{ animationDelay: `${index * 0.05}s` }}
               >
-                <div className="flex justify-between items-center mb-1">
-                  <div className="text-sm font-semibold">{message.role === "user" ? "You" : "TooliQ"}</div>
-                  {message.role === "assistant" && <ModelBadge model={selectedModel} />}
-                </div>
-                <div className="whitespace-pre-wrap">{message.content}</div>
+                <div className={`flex gap-3 max-w-[85%] ${message.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
+                  <Avatar className={`h-8 w-8 ${message.role === "user" ? "bg-pastel-lavender" : "bg-primary"}`}>
+                    <AvatarFallback>{message.role === "user" ? "U" : "AI"}</AvatarFallback>
+                  </Avatar>
 
-                {/* Display attachments if any */}
-                {message.files?.map((file) => (
-                  <FilePreview key={file.id} id={file.id} filename={file.filename} contentType={file.contentType} />
-                ))}
+                  <div className={`space-y-2 ${message.role === "user" ? "items-end" : "items-start"}`}>
+                    <div
+                      className={`message-bubble ${
+                        message.role === "user" ? "message-bubble-user" : "message-bubble-assistant"
+                      }`}
+                    >
+                      <div className="flex justify-between items-start mb-1">
+                        <div className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                          {message.role === "user" ? "You" : "TooliQ"}
+                        </div>
+                        {message.role === "assistant" && <ModelBadge model={selectedModel} />}
+                      </div>
+                      <div className="whitespace-pre-wrap">{message.content}</div>
+
+                      {/* Display attachments if any */}
+                      {message.files?.map((file) => (
+                        <FilePreview
+                          key={file.id}
+                          id={file.id}
+                          filename={file.filename}
+                          contentType={file.contentType}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
               </div>
             ))}
             <div ref={messagesEndRef} />
           </div>
         )}
-      </main>
+      </ScrollArea>
 
-      <footer className="border-t border-gray-200 dark:border-gray-800 p-4">
+      <footer className="border-t border-pastel-lavender/30 dark:border-pastel-lilac/10 p-4 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm">
         <div className="max-w-3xl mx-auto">
           <div className="text-center text-xs text-gray-500 mb-4">
-            Make sure you agree to our{" "}
-            <a href="#" className="text-purple-600 hover:underline">
-              Terms
-            </a>{" "}
-            and our{" "}
-            <a href="#" className="text-purple-600 hover:underline">
-              Privacy Policy
-            </a>
+            <span className="inline-flex items-center">
+              <Info className="h-3 w-3 mr-1" />
+              By using TooliQ, you agree to our{" "}
+              <a href="#" className="text-primary hover:underline mx-1">
+                Terms
+              </a>{" "}
+              and{" "}
+              <a href="#" className="text-primary hover:underline ml-1">
+                Privacy Policy
+              </a>
+            </span>
           </div>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-2">
             {/* Display pending attachments */}
             {attachments.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-2">
+              <div className="flex flex-wrap gap-2 mb-2 animate-fade-in">
                 {attachments.map((attachment) => (
                   <div key={attachment.id} className="relative">
                     <FilePreview
@@ -300,7 +372,7 @@ export function ChatInterface({ userId, initialConversationId }: ChatInterfacePr
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
+                      className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-white dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
                       onClick={() => setAttachments((prev) => prev.filter((a) => a.id !== attachment.id))}
                     >
                       ×
@@ -311,29 +383,40 @@ export function ChatInterface({ userId, initialConversationId }: ChatInterfacePr
             )}
 
             <div className="flex items-end gap-2">
-              <div className="flex-1 flex items-end gap-2 bg-white dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 p-2">
+              <div className="input-container flex-1">
                 <FileUpload onFileUploaded={handleFileUploaded} />
                 <Textarea
                   value={input}
-                  onChange={(e) => setInput(e.target.value)}
+                  onChange={handleInputChange}
                   placeholder="Type your message here..."
-                  className="flex-1 min-h-[60px] resize-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                  className="flex-1 min-h-[60px] resize-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent"
                 />
               </div>
               <div className="flex flex-col gap-2">
                 <Select value={selectedModel} onValueChange={handleModelChange}>
-                  <SelectTrigger className="w-[140px]">
+                  <SelectTrigger className="w-[140px] rounded-xl border-pastel-lavender/50 dark:border-pastel-lilac/20 bg-white/80 dark:bg-gray-800/60">
                     <SelectValue placeholder="Select model" />
                   </SelectTrigger>
                   <SelectContent>
                     {AVAILABLE_MODELS.map((model) => (
-                      <SelectItem key={model.id} value={model.id}>
-                        {model.name}
+                      <SelectItem key={model.id} value={model.id} className="flex items-center">
+                        <div className="flex items-center">
+                          {model.icon}
+                          {model.name}
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <Button type="submit" className="bg-purple-600 hover:bg-purple-700" disabled={isLoading}>
+                <Button
+                  type="submit"
+                  className={`rounded-xl h-10 transition-all duration-300 ${
+                    isTyping
+                      ? "bg-primary hover:bg-primary/90"
+                      : "bg-pastel-lavender/50 dark:bg-pastel-lilac/20 text-primary hover:bg-pastel-lavender/70 dark:hover:bg-pastel-lilac/30"
+                  }`}
+                  disabled={isLoading}
+                >
                   {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                   <span className="sr-only">Send message</span>
                 </Button>
