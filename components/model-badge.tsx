@@ -6,16 +6,18 @@ interface ModelBadgeProps {
 
 export function ModelBadge({ model }: ModelBadgeProps) {
   // Get the display name and color based on the model ID
-  let displayName = model
+  let displayName = model || "Unknown"
   let colorClass = "bg-gray-500"
 
-  if (model.startsWith("azure-grok")) {
+  const modelStr = String(model || "").toLowerCase()
+
+  if (modelStr.indexOf("azure-grok") === 0 || modelStr.indexOf("grok") === 0) {
     displayName = "Grok 3 (Azure)"
     colorClass = "bg-purple-600"
-  } else if (model.startsWith("gpt-4")) {
+  } else if (modelStr.indexOf("gpt-4") === 0) {
     displayName = "GPT-4o"
     colorClass = "bg-green-600"
-  } else if (model.startsWith("gpt-3.5")) {
+  } else if (modelStr.indexOf("gpt-3.5") === 0) {
     displayName = "GPT-3.5"
     colorClass = "bg-blue-600"
   }

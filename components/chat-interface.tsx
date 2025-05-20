@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-import { ModelBadge } from "./model-badge"
 
 import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
@@ -10,16 +9,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Send, Loader2, AlertCircle } from "lucide-react"
 import { FileUpload } from "./file-upload"
 import { FilePreview } from "./file-preview"
-import { useChat } from "ai/react"
-import { toast } from "@/hooks/use-toast"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { ModelBadge } from "./model-badge"
+import { toast } from "@/hooks/use-toast"
 
-type MessageType = {
-  id: string
+type Message = {
+  id: number
   role: "user" | "assistant" | "system"
   content: string
-  attachments?: Array<{
-    url: string
+  files?: Array<{
+    id: number
     filename: string
     contentType: string
   }>
@@ -32,102 +31,143 @@ const AVAILABLE_MODELS = [
   { id: "gpt-3.5-turbo", name: "GPT-3.5 Turbo" },
 ]
 
-export function ChatInterface() {
-  const [selectedModel, setSelectedModel] = useState("azure-grok") // Default to Azure Grok
-  const [attachments, setAttachments] = useState<Array<{ url: string; filename: string; contentType: string }>>([])
+interface ChatInterfaceProps {
+  userId: string
+  initialConversationId?: number
+}
+
+export function ChatInterface({ userId, initialConversationId }: ChatInterfaceProps) {
+  const [selectedModel, setSelectedModel] = useState("gpt-4o")
+  const [conversationId, setConversationId] = useState<number | undefined>(initialConversationId)
+  const [messages, setMessages] = useState<Message[]>([])
+  const [input, setInput] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [attachments, setAttachments] = useState<Array<{ id: number; filename: string; contentType: string }>>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const [isWelcomePage, setIsWelcomePage] = useState(true)
-  const [apiError, setApiError] = useState<string | null>(null)
+  const [isWelcomePage, setIsWelcomePage] = useState(!initialConversationId)
 
-  const { messages, input, handleInputChange, handleSubmit, isLoading, error } = useChat({
-    api: "/api/chat",
-    body: {
-      model: selectedModel,
-    },
-    onResponse: (response) => {
-      // Check if the response is an error
-      if (!response.ok) {
-        response
-          .json()
-          .then((data) => {
-            console.error("API error:", data)
-            setApiError(data.details || "Failed to get a response from the AI model")
-          })
-          .catch((err) => {
-            console.error("Failed to parse error response:", err)
-          })
-      } else {
-        setIsWelcomePage(false)
-        setApiError(null)
-      }
-    },
-    onError: (error) => {
-      console.error("Chat error:", error)
-      setApiError(error.message || "Failed to get a response from the AI model")
-      toast({
-        title: "Error",
-        description: error.message || "Failed to get a response from the AI model. Try a different model.",
-        variant: "destructive",
-      })
-    },
-  })
-
-  // Handle model change
-  const handleModelChange = (modelId: string) => {
-    setSelectedModel(modelId)
-    setApiError(null) // Clear any previous errors when changing models
-  }
+  // Load messages if conversation ID is provided
+  useEffect(() => {
+    if (conversationId) {
+      fetchMessages(conversationId)
+    }
+  }, [conversationId])
 
   // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
 
-  const handleFileUploaded = (fileData: { url: string; filename: string; contentType: string }) => {
+  const fetchMessages = async (convId: number) => {
     try {
-      // Validate the URL format
-      new URL(fileData.url)
-
-      // Add the file to attachments
-      setAttachments((prev) => [...prev, fileData])
+      const response = await fetch(`/api/conversations/${convId}/messages`)
+      if (!response.ok) {
+        throw new Error("Failed to fetch messages")
+      }
+      const data = await response.json()
+      setMessages(data)
+      setIsWelcomePage(false)
     } catch (error) {
-      console.error("Invalid file URL:", error)
+      console.error("Error fetching messages:", error)
       toast({
-        title: "Upload error",
-        description: "The file URL is invalid. Please try again.",
+        title: "Error",
+        description: "Failed to load conversation messages",
         variant: "destructive",
       })
     }
   }
 
-  const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleModelChange = (modelId: string) => {
+    setSelectedModel(modelId)
+    setError(null)
+  }
+
+  const handleFileUploaded = (fileData: { id: number; filename: string; contentType: string }) => {
+    setAttachments((prev) => [...prev, fileData])
+  }
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
 
     if (!input.trim() && attachments.length === 0) return
 
-    // Create a custom message with attachments
-    const customMessages = [
-      ...messages,
-      {
-        id: Date.now().toString(),
-        role: "user" as const,
-        content: input,
-        attachments: attachments.length > 0 ? [...attachments] : undefined,
-      },
-    ]
+    setIsLoading(true)
+    setError(null)
 
-    // Reset attachments
+    // Add user message to UI immediately
+    const userMessage: Message = {
+      id: Date.now(),
+      role: "user",
+      content: input || "Here's a file I'd like to share.",
+      files: attachments.length > 0 ? [...attachments] : undefined,
+    }
+
+    setMessages((prev) => [...prev, userMessage])
+    setInput("")
     setAttachments([])
 
-    // Submit the form with custom messages
-    handleSubmit(e, {
-      options: {
-        body: {
-          messages: customMessages,
-          model: selectedModel,
+    try {
+      // Format messages for API
+      const apiMessages = messages.map((msg) => ({
+        role: msg.role,
+        content: msg.content,
+      }))
+
+      // Add the new user message
+      apiMessages.push({
+        role: "user",
+        content: userMessage.content,
+      })
+
+      // Call the API
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-      },
-    })
+        body: JSON.stringify({
+          messages: apiMessages,
+          model: selectedModel,
+          conversationId,
+          userId,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.details || "Failed to get response from AI")
+      }
+
+      const data = await response.json()
+
+      // Update conversation ID if this is a new conversation
+      if (!conversationId && data.conversationId) {
+        setConversationId(data.conversationId)
+      }
+
+      // Add assistant response to messages
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now() + 1,
+          role: "assistant",
+          content: data.text,
+        },
+      ])
+
+      setIsWelcomePage(false)
+    } catch (error) {
+      console.error("Error in chat:", error)
+      setError(error instanceof Error ? error.message : "An unexpected error occurred")
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to get a response",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -142,12 +182,12 @@ export function ChatInterface() {
       </header>
 
       <main className="flex-1 overflow-auto p-6">
-        {apiError && (
+        {error && (
           <Alert variant="destructive" className="mb-4 max-w-3xl mx-auto">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Error</AlertTitle>
             <AlertDescription>
-              {apiError}
+              {error}
               <div className="mt-2">Please try a different model or try again later.</div>
             </AlertDescription>
           </Alert>
@@ -222,13 +262,8 @@ export function ChatInterface() {
                 <div className="whitespace-pre-wrap">{message.content}</div>
 
                 {/* Display attachments if any */}
-                {(message as MessageType).attachments?.map((attachment, index) => (
-                  <FilePreview
-                    key={index}
-                    url={attachment.url}
-                    filename={attachment.filename}
-                    contentType={attachment.contentType}
-                  />
+                {message.files?.map((file) => (
+                  <FilePreview key={file.id} id={file.id} filename={file.filename} contentType={file.contentType} />
                 ))}
               </div>
             ))}
@@ -250,14 +285,14 @@ export function ChatInterface() {
             </a>
           </div>
 
-          <form onSubmit={handleFormSubmit} className="flex flex-col gap-2">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-2">
             {/* Display pending attachments */}
             {attachments.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-2">
-                {attachments.map((attachment, index) => (
-                  <div key={index} className="relative">
+                {attachments.map((attachment) => (
+                  <div key={attachment.id} className="relative">
                     <FilePreview
-                      url={attachment.url}
+                      id={attachment.id}
                       filename={attachment.filename}
                       contentType={attachment.contentType}
                     />
@@ -266,7 +301,7 @@ export function ChatInterface() {
                       variant="ghost"
                       size="icon"
                       className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
-                      onClick={() => setAttachments((prev) => prev.filter((_, i) => i !== index))}
+                      onClick={() => setAttachments((prev) => prev.filter((a) => a.id !== attachment.id))}
                     >
                       ×
                     </Button>
@@ -280,7 +315,7 @@ export function ChatInterface() {
                 <FileUpload onFileUploaded={handleFileUploaded} />
                 <Textarea
                   value={input}
-                  onChange={handleInputChange}
+                  onChange={(e) => setInput(e.target.value)}
                   placeholder="Type your message here..."
                   className="flex-1 min-h-[60px] resize-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
                 />

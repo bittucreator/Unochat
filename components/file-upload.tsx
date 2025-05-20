@@ -5,14 +5,14 @@ import type React from "react"
 import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Paperclip, Loader2 } from "lucide-react"
-import { uploadFile } from "@/app/actions/upload"
 import { toast } from "@/hooks/use-toast"
 
 interface FileUploadProps {
-  onFileUploaded: (fileData: { url: string; filename: string; contentType: string }) => void
+  onFileUploaded: (fileData: { id: number; filename: string; contentType: string }) => void
+  messageId?: number
 }
 
-export function FileUpload({ onFileUploaded }: FileUploadProps) {
+export function FileUpload({ onFileUploaded, messageId }: FileUploadProps) {
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -35,19 +35,25 @@ export function FileUpload({ onFileUploaded }: FileUploadProps) {
     try {
       const formData = new FormData()
       formData.append("file", file)
+      if (messageId) {
+        formData.append("messageId", messageId.toString())
+      }
 
-      const result = await uploadFile(formData)
+      const response = await fetch("/api/files", {
+        method: "POST",
+        body: formData,
+      })
 
-      if (result.error) {
-        console.error("Upload error:", result.error)
-        toast({
-          title: "Upload failed",
-          description: result.error,
-          variant: "destructive",
-        })
-      } else if (result.success) {
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Upload failed")
+      }
+
+      const result = await response.json()
+
+      if (result.success) {
         onFileUploaded({
-          url: result.url,
+          id: result.id,
           filename: result.filename,
           contentType: result.contentType,
         })
@@ -55,12 +61,14 @@ export function FileUpload({ onFileUploaded }: FileUploadProps) {
           title: "File uploaded",
           description: "Your file has been uploaded successfully",
         })
+      } else {
+        throw new Error(result.error || "Upload failed")
       }
     } catch (error) {
-      console.error("Unexpected error:", error)
+      console.error("Upload error:", error)
       toast({
         title: "Upload failed",
-        description: "An unexpected error occurred",
+        description: error instanceof Error ? error.message : "An unexpected error occurred",
         variant: "destructive",
       })
     } finally {
