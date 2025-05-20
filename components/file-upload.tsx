@@ -20,6 +20,16 @@ export function FileUpload({ onFileUploaded }: FileUploadProps) {
     const file = e.target.files?.[0]
     if (!file) return
 
+    // Validate file size (limit to 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Maximum file size is 10MB",
+        variant: "destructive",
+      })
+      return
+    }
+
     setIsUploading(true)
 
     try {
@@ -29,6 +39,7 @@ export function FileUpload({ onFileUploaded }: FileUploadProps) {
       const result = await uploadFile(formData)
 
       if (result.error) {
+        console.error("Upload error:", result.error)
         toast({
           title: "Upload failed",
           description: result.error,
@@ -46,6 +57,7 @@ export function FileUpload({ onFileUploaded }: FileUploadProps) {
         })
       }
     } catch (error) {
+      console.error("Unexpected error:", error)
       toast({
         title: "Upload failed",
         description: "An unexpected error occurred",

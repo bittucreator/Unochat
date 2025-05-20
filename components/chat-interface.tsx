@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+import { ModelBadge } from "./model-badge"
 
 import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
@@ -10,6 +11,7 @@ import { Send, Loader2 } from "lucide-react"
 import { FileUpload } from "./file-upload"
 import { FilePreview } from "./file-preview"
 import { useChat } from "ai/react"
+import { toast } from "@/hooks/use-toast"
 
 type MessageType = {
   id: string
@@ -22,19 +24,35 @@ type MessageType = {
   }>
 }
 
+// Define available models
+const AVAILABLE_MODELS = [
+  { id: "grok-3", name: "Grok 3" },
+  { id: "grok-3-mini", name: "Grok 3 Mini" },
+  { id: "gpt-4o", name: "GPT-4o" },
+  { id: "gpt-3.5-turbo", name: "GPT-3.5 Turbo" },
+]
+
 export function ChatInterface() {
-  const [selectedModel, setSelectedModel] = useState("gpt-4o")
+  const [selectedModel, setSelectedModel] = useState("grok-3")
   const [attachments, setAttachments] = useState<Array<{ url: string; filename: string; contentType: string }>>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [isWelcomePage, setIsWelcomePage] = useState(true)
 
-  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
+  const { messages, input, handleInputChange, handleSubmit, isLoading, error } = useChat({
     api: "/api/chat",
     body: {
       model: selectedModel,
     },
     onResponse: () => {
       setIsWelcomePage(false)
+    },
+    onError: (error) => {
+      console.error("Chat error:", error)
+      toast({
+        title: "Error",
+        description: error.message || "Failed to get a response from the AI model",
+        variant: "destructive",
+      })
     },
   })
 
@@ -44,7 +62,20 @@ export function ChatInterface() {
   }, [messages])
 
   const handleFileUploaded = (fileData: { url: string; filename: string; contentType: string }) => {
-    setAttachments((prev) => [...prev, fileData])
+    try {
+      // Validate the URL format
+      new URL(fileData.url)
+
+      // Add the file to attachments
+      setAttachments((prev) => [...prev, fileData])
+    } catch (error) {
+      console.error("Invalid file URL:", error)
+      toast({
+        title: "Upload error",
+        description: "The file URL is invalid. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
   const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -108,9 +139,9 @@ export function ChatInterface() {
                   2. We have every model you could want.
                 </h2>
                 <p className="text-gray-700 dark:text-gray-300">
-                  Want to use <span className="font-semibold">Claude</span> for code? We got you.
-                  <span className="font-semibold"> DeepSeek r1</span> for math? Of course.
-                  <span className="font-semibold"> ChatGPT 4o</span> for picture analysis? Why not.
+                  Want to use <span className="font-semibold">Grok 3</span> for code? We got you.
+                  <span className="font-semibold"> GPT-4o</span> for picture analysis? Of course.
+                  <span className="font-semibold"> Grok 3 Mini</span> for quick responses? Why not.
                 </p>
                 <p className="mt-2 text-gray-700 dark:text-gray-300">
                   When new models come out, we make them available within hours of release.
@@ -151,7 +182,10 @@ export function ChatInterface() {
                     : "bg-gray-100 dark:bg-gray-800 mr-auto max-w-[80%]"
                 }`}
               >
-                <div className="text-sm font-semibold mb-1">{message.role === "user" ? "You" : "TooliQ"}</div>
+                <div className="flex justify-between items-center mb-1">
+                  <div className="text-sm font-semibold">{message.role === "user" ? "You" : "TooliQ"}</div>
+                  {message.role === "assistant" && <ModelBadge model={selectedModel} />}
+                </div>
                 <div className="whitespace-pre-wrap">{message.content}</div>
 
                 {/* Display attachments if any */}
@@ -224,10 +258,11 @@ export function ChatInterface() {
                     <SelectValue placeholder="Select model" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="gpt-4o">GPT-4o</SelectItem>
-                    <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo</SelectItem>
-                    <SelectItem value="claude-3-5-sonnet">Claude 3.5 Sonnet</SelectItem>
-                    <SelectItem value="gemini-pro">Gemini Pro</SelectItem>
+                    {AVAILABLE_MODELS.map((model) => (
+                      <SelectItem key={model.id} value={model.id}>
+                        {model.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <Button type="submit" className="bg-purple-600 hover:bg-purple-700" disabled={isLoading}>

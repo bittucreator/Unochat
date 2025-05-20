@@ -1,5 +1,6 @@
 import { StreamingTextResponse } from "ai"
 import { openai } from "@ai-sdk/openai"
+import { xai } from "@ai-sdk/xai"
 import { streamText } from "ai"
 
 export const runtime = "nodejs"
@@ -32,9 +33,20 @@ export async function POST(req: Request) {
     return message
   })
 
+  // Select the appropriate model provider based on the model name
+  let selectedModel
+
+  if (model.startsWith("grok")) {
+    // Use xAI provider for Grok models
+    selectedModel = xai(model)
+  } else {
+    // Default to OpenAI for other models
+    selectedModel = openai(model)
+  }
+
   // Use the AI SDK to stream the response
   const result = await streamText({
-    model: openai(model),
+    model: selectedModel,
     messages: processedMessages.map((m: any) => ({
       role: m.role,
       content: m.content,
