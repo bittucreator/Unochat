@@ -27,14 +27,13 @@ type MessageType = {
 
 // Define available models
 const AVAILABLE_MODELS = [
-  { id: "grok-3-beta", name: "Grok 3 Beta" },
-  { id: "grok-3-mini-beta", name: "Grok 3 Mini Beta" },
+  { id: "azure-grok", name: "Grok 3 (Azure)" },
   { id: "gpt-4o", name: "GPT-4o" },
   { id: "gpt-3.5-turbo", name: "GPT-3.5 Turbo" },
 ]
 
 export function ChatInterface() {
-  const [selectedModel, setSelectedModel] = useState("gpt-4o") // Default to GPT-4o as fallback
+  const [selectedModel, setSelectedModel] = useState("azure-grok") // Default to Azure Grok
   const [attachments, setAttachments] = useState<Array<{ url: string; filename: string; contentType: string }>>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [isWelcomePage, setIsWelcomePage] = useState(true)
@@ -175,7 +174,7 @@ export function ChatInterface() {
                 <p className="text-gray-700 dark:text-gray-300">
                   Want to use <span className="font-semibold">Grok 3</span> for code? We got you.
                   <span className="font-semibold"> GPT-4o</span> for picture analysis? Of course.
-                  <span className="font-semibold"> Grok 3 Mini</span> for quick responses? Why not.
+                  <span className="font-semibold"> GPT-3.5</span> for quick responses? Why not.
                 </p>
                 <p className="mt-2 text-gray-700 dark:text-gray-300">
                   When new models come out, we make them available within hours of release.

@@ -9,8 +9,8 @@ export function ModelBadge({ model }: ModelBadgeProps) {
   let displayName = model
   let colorClass = "bg-gray-500"
 
-  if (model.includes("grok")) {
-    displayName = model.includes("mini") ? "Grok 3 Mini" : "Grok 3"
+  if (model.startsWith("azure-grok")) {
+    displayName = "Grok 3 (Azure)"
     colorClass = "bg-purple-600"
   } else if (model.startsWith("gpt-4")) {
     displayName = "GPT-4o"

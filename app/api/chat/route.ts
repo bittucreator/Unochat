@@ -1,6 +1,5 @@
 import { StreamingTextResponse } from "ai"
 import { openai } from "@ai-sdk/openai"
-import { xai } from "@ai-sdk/xai"
 import { streamText } from "ai"
 
 export const runtime = "nodejs"
@@ -40,18 +39,28 @@ export async function POST(req: Request) {
     // Select the appropriate model provider based on the model name
     let selectedModel
 
-    if (model.startsWith("grok")) {
-      // For Grok models, we need to use the correct model ID format
-      // The format might be different depending on your Azure deployment
-      // Try using the model name directly from Azure
-      console.log("Using xAI provider for Grok model")
+    if (model.startsWith("grok") || model.startsWith("azure-grok")) {
+      // For Azure-deployed Grok models, we need to use the Azure OpenAI configuration
+      console.log("Using Azure OpenAI for Grok model")
 
-      // Use the XAI_API_KEY environment variable that was set up during integration
-      if (!process.env.XAI_API_KEY) {
-        throw new Error("XAI_API_KEY environment variable is not set")
+      // Validate Azure OpenAI environment variables
+      if (!process.env.AZURE_OPENAI_API_ENDPOINT) {
+        throw new Error("AZURE_OPENAI_API_ENDPOINT environment variable is not set")
+      }
+      if (!process.env.AZURE_OPENAI_API_KEY) {
+        throw new Error("AZURE_OPENAI_API_KEY environment variable is not set")
+      }
+      if (!process.env.AZURE_OPENAI_API_DEPLOYMENT_NAME) {
+        throw new Error("AZURE_OPENAI_API_DEPLOYMENT_NAME environment variable is not set")
       }
 
-      selectedModel = xai(model)
+      // Use Azure OpenAI configuration
+      selectedModel = openai({
+        baseURL: process.env.AZURE_OPENAI_API_ENDPOINT,
+        apiKey: process.env.AZURE_OPENAI_API_KEY,
+        // Use the deployment name from Azure
+        model: process.env.AZURE_OPENAI_API_DEPLOYMENT_NAME,
+      })
     } else {
       // Default to OpenAI for other models
       console.log("Using OpenAI provider")
