@@ -7,11 +7,12 @@ import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Send, Loader2 } from "lucide-react"
+import { Send, Loader2, AlertCircle } from "lucide-react"
 import { FileUpload } from "./file-upload"
 import { FilePreview } from "./file-preview"
 import { useChat } from "ai/react"
 import { toast } from "@/hooks/use-toast"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 type MessageType = {
   id: string
@@ -26,35 +27,57 @@ type MessageType = {
 
 // Define available models
 const AVAILABLE_MODELS = [
-  { id: "grok-3", name: "Grok 3" },
-  { id: "grok-3-mini", name: "Grok 3 Mini" },
+  { id: "grok-3-beta", name: "Grok 3 Beta" },
+  { id: "grok-3-mini-beta", name: "Grok 3 Mini Beta" },
   { id: "gpt-4o", name: "GPT-4o" },
   { id: "gpt-3.5-turbo", name: "GPT-3.5 Turbo" },
 ]
 
 export function ChatInterface() {
-  const [selectedModel, setSelectedModel] = useState("grok-3")
+  const [selectedModel, setSelectedModel] = useState("gpt-4o") // Default to GPT-4o as fallback
   const [attachments, setAttachments] = useState<Array<{ url: string; filename: string; contentType: string }>>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [isWelcomePage, setIsWelcomePage] = useState(true)
+  const [apiError, setApiError] = useState<string | null>(null)
 
   const { messages, input, handleInputChange, handleSubmit, isLoading, error } = useChat({
     api: "/api/chat",
     body: {
       model: selectedModel,
     },
-    onResponse: () => {
-      setIsWelcomePage(false)
+    onResponse: (response) => {
+      // Check if the response is an error
+      if (!response.ok) {
+        response
+          .json()
+          .then((data) => {
+            console.error("API error:", data)
+            setApiError(data.details || "Failed to get a response from the AI model")
+          })
+          .catch((err) => {
+            console.error("Failed to parse error response:", err)
+          })
+      } else {
+        setIsWelcomePage(false)
+        setApiError(null)
+      }
     },
     onError: (error) => {
       console.error("Chat error:", error)
+      setApiError(error.message || "Failed to get a response from the AI model")
       toast({
         title: "Error",
-        description: error.message || "Failed to get a response from the AI model",
+        description: error.message || "Failed to get a response from the AI model. Try a different model.",
         variant: "destructive",
       })
     },
   })
+
+  // Handle model change
+  const handleModelChange = (modelId: string) => {
+    setSelectedModel(modelId)
+    setApiError(null) // Clear any previous errors when changing models
+  }
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -120,6 +143,17 @@ export function ChatInterface() {
       </header>
 
       <main className="flex-1 overflow-auto p-6">
+        {apiError && (
+          <Alert variant="destructive" className="mb-4 max-w-3xl mx-auto">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>
+              {apiError}
+              <div className="mt-2">Please try a different model or try again later.</div>
+            </AlertDescription>
+          </Alert>
+        )}
+
         {isWelcomePage ? (
           <div className="max-w-3xl mx-auto">
             <h1 className="text-3xl font-bold text-center text-purple-800 dark:text-purple-200 mb-8">
@@ -253,7 +287,7 @@ export function ChatInterface() {
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <Select value={selectedModel} onValueChange={setSelectedModel}>
+                <Select value={selectedModel} onValueChange={handleModelChange}>
                   <SelectTrigger className="w-[140px]">
                     <SelectValue placeholder="Select model" />
                   </SelectTrigger>
