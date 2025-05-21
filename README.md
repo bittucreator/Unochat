@@ -1,5 +1,7 @@
 # Unochat
 
+![unochat](https://github.com/user-attachments/assets/894a0ac8-2901-44f3-a863-cd9a05c40421)
+
 Unochat is now open source! 🎉
 
 Unochat is an AI chat application designed to provide intelligent and seamless conversational experiences. As an open-source project, we welcome contributions and collaboration from the community.
