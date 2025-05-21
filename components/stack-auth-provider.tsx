@@ -4,11 +4,13 @@ import type React from "react"
 
 import { createContext, useContext, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import Script from "next/script"
 
 type User = {
   id: string
   email: string
   name?: string
+  picture?: string
 }
 
 type AuthContextType = {
@@ -45,6 +47,7 @@ export function StackAuthProvider({ children }: { children: React.ReactNode }) {
             id: user.id,
             email: user.email,
             name: user.name,
+            picture: user.picture,
           })
         } else {
           setUser(null)
@@ -67,6 +70,7 @@ export function StackAuthProvider({ children }: { children: React.ReactNode }) {
                 id: user.id,
                 email: user.email,
                 name: user.name,
+                picture: user.picture,
               })
             } else {
               setUser(null)
@@ -81,12 +85,7 @@ export function StackAuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const login = () => {
-    if (typeof window !== "undefined" && window.StackAuth) {
-      const stackAuthButton = document.getElementById("stack-auth-button")
-      if (stackAuthButton) {
-        stackAuthButton.click()
-      }
-    }
+    router.push("/auth/login")
   }
 
   const logout = () => {
@@ -97,5 +96,10 @@ export function StackAuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  return <AuthContext.Provider value={{ user, isLoading, login, logout }}>{children}</AuthContext.Provider>
+  return (
+    <>
+      <Script src="https://cdn.stackauth.net/auth.js" strategy="afterInteractive" />
+      <AuthContext.Provider value={{ user, isLoading, login, logout }}>{children}</AuthContext.Provider>
+    </>
+  )
 }

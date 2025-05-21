@@ -2,17 +2,15 @@ interface StackAuthUser {
   id: string
   email: string
   name?: string
+  picture?: string
 }
 
 interface StackAuth {
+  currentUser: StackAuthUser | null
+  onAuthStateChanged: (callback: (user: StackAuthUser | null) => void) => () => void
   signOut: () => Promise<void>
-  onAuthStateChanged: (callback: (user: StackAuthUser | null) => void) => void
 }
 
-declare global {
-  interface Window {
-    StackAuth: StackAuth
-  }
+interface Window {
+  StackAuth?: StackAuth
 }
-
-export {}
