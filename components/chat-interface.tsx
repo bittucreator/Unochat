@@ -6,7 +6,7 @@ import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Send, Loader2, AlertCircle, Sparkles, Info, ImageIcon, FileText, Zap, Bot } from "lucide-react"
+import { Send, Loader2, AlertCircle, Sparkles, Info, ImageIcon, Zap, Bot, Code } from "lucide-react"
 import { FileUpload } from "./file-upload"
 import { FilePreview } from "./file-preview"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -16,6 +16,9 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Card, CardContent } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { UnochatLogo } from "./unochat-logo"
+import { useTheme } from "next-themes"
+import { CodeBlock } from "./ui/code-block"
 
 type Message = {
   id: number
@@ -51,6 +54,8 @@ export function ChatInterface({ userId, initialConversationId }: ChatInterfacePr
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [isWelcomePage, setIsWelcomePage] = useState(!initialConversationId)
   const [isTyping, setIsTyping] = useState(false)
+  const { theme } = useTheme()
+  const isDarkMode = theme === "dark"
 
   // Load messages if conversation ID is provided
   useEffect(() => {
@@ -181,11 +186,47 @@ export function ChatInterface({ userId, initialConversationId }: ChatInterfacePr
     }
   }
 
+  // Function to format message content with code blocks
+  const formatMessageContent = (content: string) => {
+    // Simple regex to detect code blocks (\`\`\`language...\`\`\`)
+    const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g
+
+    let lastIndex = 0
+    const parts = []
+    let match
+
+    // Find all code blocks
+    while ((match = codeBlockRegex.exec(content)) !== null) {
+      // Add text before code block
+      if (match.index > lastIndex) {
+        parts.push(<span key={`text-${lastIndex}`}>{content.slice(lastIndex, match.index)}</span>)
+      }
+
+      // Add code block
+      const language = match[1] || ""
+      const code = match[2]
+      parts.push(
+        <CodeBlock key={`code-${match.index}`} language={language}>
+          {code}
+        </CodeBlock>,
+      )
+
+      lastIndex = match.index + match[0].length
+    }
+
+    // Add remaining text
+    if (lastIndex < content.length) {
+      parts.push(<span key={`text-${lastIndex}`}>{content.slice(lastIndex)}</span>)
+    }
+
+    return parts.length > 0 ? parts : content
+  }
+
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-gradient-to-b from-pastel-lavender/10 to-white dark:from-gray-900 dark:to-gray-950">
-      <header className="flex justify-between items-center p-4 border-b border-pastel-lavender/30 dark:border-pastel-lilac/10 backdrop-blur-sm bg-white/50 dark:bg-gray-900/50">
-        <h1 className="text-lg font-medium text-primary/80 hidden sm:block">
-          {conversationId ? "Chat" : "Welcome to TooliQ"}
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-white dark:bg-vercel-gray-900">
+      <header className="flex justify-between items-center p-4 border-b border-vercel-gray-200 dark:border-vercel-gray-800 bg-white dark:bg-black">
+        <h1 className="text-lg font-medium text-vercel-fg dark:text-white hidden sm:block">
+          {conversationId ? "Chat" : "Welcome to unochat"}
         </h1>
         <div className="flex items-center gap-2">
           <TooltipProvider>
@@ -194,14 +235,14 @@ export function ChatInterface({ userId, initialConversationId }: ChatInterfacePr
                 <Button
                   variant="outline"
                   size="sm"
-                  className="rounded-xl border-pastel-lavender/50 dark:border-pastel-lilac/20 bg-white/80 dark:bg-gray-800/60"
+                  className="rounded-md border-vercel-gray-200 dark:border-vercel-gray-800 bg-white dark:bg-vercel-gray-900"
                 >
                   <Info className="h-4 w-4 mr-1.5 text-primary" />
-                  <span className="hidden sm:inline">About TooliQ</span>
+                  <span className="hidden sm:inline">About unochat</span>
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Learn more about TooliQ</p>
+                <p>Learn more about unochat</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -222,41 +263,35 @@ export function ChatInterface({ userId, initialConversationId }: ChatInterfacePr
 
         {isWelcomePage ? (
           <div className="max-w-3xl mx-auto animate-fade-in">
-            <Card className="border-pastel-lavender/30 dark:border-pastel-lilac/10 bg-white/80 dark:bg-gray-800/60 shadow-sm mb-8">
+            <Card className="border-vercel-gray-200 dark:border-vercel-gray-800 bg-white dark:bg-vercel-gray-900 shadow-sm mb-8">
               <CardContent className="p-6">
                 <div className="flex items-center justify-center mb-6">
-                  <div className="bg-primary/10 p-3 rounded-full">
-                    <Sparkles className="text-primary h-8 w-8" />
-                  </div>
+                  <UnochatLogo size="lg" darkMode={isDarkMode} />
                 </div>
-                <h1 className="text-3xl font-bold text-center bg-gradient-to-r from-primary to-pastel-lilac bg-clip-text text-transparent mb-8">
-                  Welcome to TooliQ
+                <h1 className="text-3xl font-bold text-center text-vercel-fg dark:text-white mb-8">
+                  Welcome to unochat
                 </h1>
 
                 <div className="space-y-8">
                   <div className="flex items-start gap-4">
-                    <div className="bg-pastel-sky/30 dark:bg-pastel-sky/10 p-2 rounded-lg">
-                      <Zap className="h-5 w-5 text-pastel-sky" />
+                    <div className="bg-vercel-gray-100 dark:bg-vercel-gray-800 p-2 rounded-md">
+                      <Zap className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                      <h2 className="text-xl font-semibold text-pastel-lilac dark:text-pastel-lavender mb-2">
-                        Lightning Fast
-                      </h2>
-                      <p className="text-gray-700 dark:text-gray-300">
+                      <h2 className="text-xl font-semibold text-vercel-fg dark:text-white mb-2">Lightning Fast</h2>
+                      <p className="text-vercel-gray-600 dark:text-vercel-gray-300">
                         We're 2x faster than ChatGPT, 10x faster than DeepSeek. You'll feel the difference - trust us.
                       </p>
                     </div>
                   </div>
 
                   <div className="flex items-start gap-4">
-                    <div className="bg-pastel-mint/30 dark:bg-pastel-mint/10 p-2 rounded-lg">
-                      <Bot className="h-5 w-5 text-pastel-mint" />
+                    <div className="bg-vercel-gray-100 dark:bg-vercel-gray-800 p-2 rounded-md">
+                      <Bot className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                      <h2 className="text-xl font-semibold text-pastel-lilac dark:text-pastel-lavender mb-2">
-                        Multiple Models
-                      </h2>
-                      <p className="text-gray-700 dark:text-gray-300">
+                      <h2 className="text-xl font-semibold text-vercel-fg dark:text-white mb-2">Multiple Models</h2>
+                      <p className="text-vercel-gray-600 dark:text-vercel-gray-300">
                         Access <span className="font-semibold">Grok 3</span> for code,
                         <span className="font-semibold"> GPT-4o</span> for images, and
                         <span className="font-semibold"> GPT-3.5</span> for quick responses.
@@ -265,29 +300,26 @@ export function ChatInterface({ userId, initialConversationId }: ChatInterfacePr
                   </div>
 
                   <div className="flex items-start gap-4">
-                    <div className="bg-pastel-peach/30 dark:bg-pastel-peach/10 p-2 rounded-lg">
-                      <ImageIcon className="h-5 w-5 text-pastel-peach" />
+                    <div className="bg-vercel-gray-100 dark:bg-vercel-gray-800 p-2 rounded-md">
+                      <ImageIcon className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                      <h2 className="text-xl font-semibold text-pastel-lilac dark:text-pastel-lavender mb-2">
-                        File Sharing
-                      </h2>
-                      <p className="text-gray-700 dark:text-gray-300">
+                      <h2 className="text-xl font-semibold text-vercel-fg dark:text-white mb-2">File Sharing</h2>
+                      <p className="text-vercel-gray-600 dark:text-vercel-gray-300">
                         Share images, PDFs, and text files directly in your conversations for instant analysis.
                       </p>
                     </div>
                   </div>
 
                   <div className="flex items-start gap-4">
-                    <div className="bg-pastel-coral/30 dark:bg-pastel-coral/10 p-2 rounded-lg">
-                      <FileText className="h-5 w-5 text-pastel-coral" />
+                    <div className="bg-vercel-gray-100 dark:bg-vercel-gray-800 p-2 rounded-md">
+                      <Code className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                      <h2 className="text-xl font-semibold text-pastel-lilac dark:text-pastel-lavender mb-2">
-                        Affordable
-                      </h2>
-                      <p className="text-gray-700 dark:text-gray-300">
-                        Just $8/month for unlimited access to all models and features. No hidden fees or usage limits.
+                      <h2 className="text-xl font-semibold text-vercel-fg dark:text-white mb-2">Code Support</h2>
+                      <p className="text-vercel-gray-600 dark:text-vercel-gray-300">
+                        Beautiful code formatting with syntax highlighting using{" "}
+                        <span className="font-mono">GeistMono</span>, Vercel's custom monospace font.
                       </p>
                     </div>
                   </div>
@@ -304,8 +336,18 @@ export function ChatInterface({ userId, initialConversationId }: ChatInterfacePr
                 style={{ animationDelay: `${index * 0.05}s` }}
               >
                 <div className={`flex gap-3 max-w-[85%] ${message.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
-                  <Avatar className={`h-8 w-8 ${message.role === "user" ? "bg-pastel-lavender" : "bg-primary"}`}>
-                    <AvatarFallback>{message.role === "user" ? "U" : "AI"}</AvatarFallback>
+                  <Avatar
+                    className={`h-8 w-8 ${
+                      message.role === "user" ? "bg-vercel-gray-200" : "bg-primary"
+                    } dark:bg-vercel-gray-800`}
+                  >
+                    {message.role === "assistant" ? (
+                      <div className="p-1.5">
+                        <UnochatLogo darkMode={true} />
+                      </div>
+                    ) : (
+                      <AvatarFallback>{message.role === "user" ? "U" : "AI"}</AvatarFallback>
+                    )}
                   </Avatar>
 
                   <div className={`space-y-2 ${message.role === "user" ? "items-end" : "items-start"}`}>
@@ -315,12 +357,12 @@ export function ChatInterface({ userId, initialConversationId }: ChatInterfacePr
                       }`}
                     >
                       <div className="flex justify-between items-start mb-1">
-                        <div className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                          {message.role === "user" ? "You" : "TooliQ"}
+                        <div className="text-xs font-medium text-vercel-gray-500 dark:text-vercel-gray-400">
+                          {message.role === "user" ? "You" : "unochat"}
                         </div>
                         {message.role === "assistant" && <ModelBadge model={selectedModel} />}
                       </div>
-                      <div className="whitespace-pre-wrap">{message.content}</div>
+                      <div className="whitespace-pre-wrap">{formatMessageContent(message.content)}</div>
 
                       {/* Display attachments if any */}
                       {message.files?.map((file) => (
@@ -341,12 +383,12 @@ export function ChatInterface({ userId, initialConversationId }: ChatInterfacePr
         )}
       </ScrollArea>
 
-      <footer className="border-t border-pastel-lavender/30 dark:border-pastel-lilac/10 p-4 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm">
+      <footer className="border-t border-vercel-gray-200 dark:border-vercel-gray-800 p-4 bg-white dark:bg-black">
         <div className="max-w-3xl mx-auto">
-          <div className="text-center text-xs text-gray-500 mb-4">
+          <div className="text-center text-xs text-vercel-gray-500 dark:text-vercel-gray-400 mb-4">
             <span className="inline-flex items-center">
               <Info className="h-3 w-3 mr-1" />
-              By using TooliQ, you agree to our{" "}
+              By using unochat, you agree to our{" "}
               <a href="#" className="text-primary hover:underline mx-1">
                 Terms
               </a>{" "}
@@ -372,7 +414,7 @@ export function ChatInterface({ userId, initialConversationId }: ChatInterfacePr
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-white dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
+                      className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-white dark:bg-vercel-gray-800 hover:bg-vercel-gray-200 dark:hover:bg-vercel-gray-700"
                       onClick={() => setAttachments((prev) => prev.filter((a) => a.id !== attachment.id))}
                     >
                       ×
@@ -394,7 +436,7 @@ export function ChatInterface({ userId, initialConversationId }: ChatInterfacePr
               </div>
               <div className="flex flex-col gap-2">
                 <Select value={selectedModel} onValueChange={handleModelChange}>
-                  <SelectTrigger className="w-[140px] rounded-xl border-pastel-lavender/50 dark:border-pastel-lilac/20 bg-white/80 dark:bg-gray-800/60">
+                  <SelectTrigger className="w-[140px] rounded-md border-vercel-gray-200 dark:border-vercel-gray-700 bg-white dark:bg-vercel-gray-900">
                     <SelectValue placeholder="Select model" />
                   </SelectTrigger>
                   <SelectContent>
@@ -410,10 +452,10 @@ export function ChatInterface({ userId, initialConversationId }: ChatInterfacePr
                 </Select>
                 <Button
                   type="submit"
-                  className={`rounded-xl h-10 transition-all duration-300 ${
+                  className={`rounded-md h-10 transition-all duration-300 ${
                     isTyping
-                      ? "bg-primary hover:bg-primary/90"
-                      : "bg-pastel-lavender/50 dark:bg-pastel-lilac/20 text-primary hover:bg-pastel-lavender/70 dark:hover:bg-pastel-lilac/30"
+                      ? "bg-vercel-fg hover:bg-vercel-gray-800 text-white"
+                      : "bg-vercel-gray-100 dark:bg-vercel-gray-800 text-vercel-fg dark:text-white hover:bg-vercel-gray-200 dark:hover:bg-vercel-gray-700"
                   }`}
                   disabled={isLoading}
                 >

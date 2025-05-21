@@ -1,15 +1,14 @@
 import type React from "react"
-import { Inter } from "next/font/google"
+import { GeistSans } from "geist/font/sans"
+import { GeistMono } from "geist/font/mono"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
 import { initializeDatabase } from "@/lib/db-init"
 
-const inter = Inter({ subsets: ["latin"] })
-
 export const metadata = {
-  title: "TooliQ - The Ultimate AI Chat Platform",
-  description: "Access powerful AI models in one place with TooliQ",
+  title: "unochat - The Ultimate AI Chat Platform",
+  description: "Access powerful AI models in one place with unochat",
     generator: 'v0.dev'
 }
 
@@ -32,8 +31,8 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+    <html lang="en" suppressHydrationWarning className={`${GeistSans.variable} ${GeistMono.variable}`}>
+      <body className={GeistSans.className}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
           {children}
           <Toaster />

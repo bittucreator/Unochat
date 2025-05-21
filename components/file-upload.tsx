@@ -99,7 +99,7 @@ export function FileUpload({ onFileUploaded, messageId }: FileUploadProps) {
               type="button"
               disabled={isUploading}
               onClick={() => fileInputRef.current?.click()}
-              className="rounded-full h-8 w-8 hover:bg-pastel-lavender/30 dark:hover:bg-pastel-lilac/10"
+              className="rounded-md h-8 w-8 hover:bg-vercel-gray-100 dark:hover:bg-vercel-gray-800"
             >
               {isUploading ? (
                 <Loader2 className="h-4 w-4 animate-spin text-primary" />

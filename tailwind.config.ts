@@ -19,19 +19,27 @@ const config = {
       },
     },
     extend: {
+      fontFamily: {
+        sans: ["var(--font-geist-sans)"],
+        mono: ["var(--font-geist-mono)"],
+      },
       colors: {
-        // Pastel color palette
-        pastel: {
-          lavender: "#E6E6FA",
-          mint: "#D0F0C0",
-          peach: "#FFDAB9",
-          sky: "#B0E0E6",
-          lemon: "#FFFACD",
-          pink: "#FFD1DC",
-          lilac: "#C8A2C8",
-          cream: "#FFFDD0",
-          coral: "#FFB6C1",
-          aqua: "#AFEEEE",
+        // Vercel-inspired color palette
+        vercel: {
+          fg: "#000000",
+          bg: "#FFFFFF",
+          accent: "#0070F3",
+          gray: {
+            100: "#FAFAFA",
+            200: "#EAEAEA",
+            300: "#999999",
+            400: "#888888",
+            500: "#666666",
+            600: "#444444",
+            700: "#333333",
+            800: "#222222",
+            900: "#111111",
+          },
         },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
