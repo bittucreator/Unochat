@@ -2,11 +2,26 @@
 
 import type React from "react"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Send, Loader2, AlertCircle, Sparkles, Info, ImageIcon, Zap, Bot, Code } from "lucide-react"
+import {
+  Send,
+  Loader2,
+  AlertCircle,
+  Sparkles,
+  Info,
+  ImageIcon,
+  Zap,
+  Bot,
+  Code,
+  Copy,
+  RefreshCw,
+  Sun,
+  Moon,
+  Settings,
+} from "lucide-react"
 import { FileUpload } from "./file-upload"
 import { FilePreview } from "./file-preview"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -54,7 +69,7 @@ export function ChatInterface({ userId, initialConversationId }: ChatInterfacePr
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [isWelcomePage, setIsWelcomePage] = useState(!initialConversationId)
   const [isTyping, setIsTyping] = useState(false)
-  const { theme } = useTheme()
+  const { theme, setTheme } = useTheme()
   const isDarkMode = theme === "dark"
 
   // Load messages if conversation ID is provided
@@ -222,6 +237,93 @@ export function ChatInterface({ userId, initialConversationId }: ChatInterfacePr
     return parts.length > 0 ? parts : content
   }
 
+  const copyToClipboard = useCallback(async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      toast({
+        title: "Copied to clipboard",
+        description: "Message content copied to clipboard",
+        duration: 2000,
+      })
+    } catch (err) {
+      console.error("Failed to copy text: ", err)
+      toast({
+        title: "Copy failed",
+        description: "Could not copy to clipboard",
+        variant: "destructive",
+      })
+    }
+  }, [])
+
+  const regenerateResponse = useCallback(async () => {
+    if (messages.length < 2) return
+
+    // Find the last user message
+    const lastUserMessageIndex = [...messages].reverse().findIndex((msg) => msg.role === "user")
+    if (lastUserMessageIndex === -1) return
+
+    const lastUserMessage = messages[messages.length - 1 - lastUserMessageIndex]
+
+    // Remove the last assistant message
+    setMessages((prev) => prev.slice(0, prev.length - 1))
+
+    // Set loading state
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      // Format messages for API (excluding the last assistant message)
+      const apiMessages = messages.slice(0, messages.length - 1).map((msg) => ({
+        role: msg.role,
+        content: msg.content,
+      }))
+
+      // Call the API
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messages: apiMessages,
+          model: selectedModel,
+          conversationId,
+          userId,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.details || "Failed to get response from AI")
+      }
+
+      const data = await response.json()
+
+      // Add new assistant response to messages
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now() + 1,
+          role: "assistant",
+          content: data.text,
+        },
+      ])
+    } catch (error) {
+      console.error("Error in regenerating response:", error)
+      setError(error instanceof Error ? error.message : "An unexpected error occurred")
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to regenerate response",
+        variant: "destructive",
+      })
+
+      // Add back the last assistant message if regeneration fails
+      setMessages(messages)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [messages, selectedModel, conversationId, userId])
+
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-white dark:bg-vercel-gray-900">
       <header className="flex justify-between items-center p-4 border-b border-vercel-gray-200 dark:border-vercel-gray-800 bg-white dark:bg-black">
@@ -234,15 +336,38 @@ export function ChatInterface({ userId, initialConversationId }: ChatInterfacePr
               <TooltipTrigger asChild>
                 <Button
                   variant="outline"
-                  size="sm"
-                  className="rounded-md border-vercel-gray-200 dark:border-vercel-gray-800 bg-white dark:bg-vercel-gray-900"
+                  size="icon"
+                  className="h-8 w-8 rounded-md border-vercel-gray-200 dark:border-vercel-gray-800 bg-white dark:bg-vercel-gray-900"
+                  onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
                 >
-                  <Info className="h-4 w-4 mr-1.5 text-primary" />
-                  <span className="hidden sm:inline">About unochat</span>
+                  {theme === "dark" ? (
+                    <Sun className="h-4 w-4 text-vercel-gray-500 dark:text-vercel-gray-400" />
+                  ) : (
+                    <Moon className="h-4 w-4 text-vercel-gray-500" />
+                  )}
+                  <span className="sr-only">Toggle theme</span>
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Learn more about unochat</p>
+                <p>Toggle theme</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8 rounded-md border-vercel-gray-200 dark:border-vercel-gray-800 bg-white dark:bg-vercel-gray-900"
+                >
+                  <Settings className="h-4 w-4 text-vercel-gray-500 dark:text-vercel-gray-400" />
+                  <span className="sr-only">Settings</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Settings</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -332,7 +457,7 @@ export function ChatInterface({ userId, initialConversationId }: ChatInterfacePr
             {messages.map((message, index) => (
               <div
                 key={message.id}
-                className={`flex ${message.role === "user" ? "justify-end" : "justify-start"} animate-slide-in`}
+                className={`flex ${message.role === "user" ? "justify-end" : "justify-start"} animate-slide-in group`}
                 style={{ animationDelay: `${index * 0.05}s` }}
               >
                 <div className={`flex gap-3 max-w-[85%] ${message.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
@@ -354,7 +479,7 @@ export function ChatInterface({ userId, initialConversationId }: ChatInterfacePr
                     <div
                       className={`message-bubble ${
                         message.role === "user" ? "message-bubble-user" : "message-bubble-assistant"
-                      }`}
+                      } relative`}
                     >
                       <div className="flex justify-between items-start mb-1">
                         <div className="text-xs font-medium text-vercel-gray-500 dark:text-vercel-gray-400">
@@ -373,6 +498,35 @@ export function ChatInterface({ userId, initialConversationId }: ChatInterfacePr
                           contentType={file.contentType}
                         />
                       ))}
+
+                      {/* Action buttons for assistant messages */}
+                      {message.role === "assistant" && (
+                        <div className="flex gap-1 absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 rounded-md bg-vercel-gray-100 dark:bg-vercel-gray-800 hover:bg-vercel-gray-200 dark:hover:bg-vercel-gray-700"
+                            onClick={() => copyToClipboard(message.content)}
+                            title="Copy to clipboard"
+                          >
+                            <Copy className="h-3 w-3 text-vercel-gray-500 dark:text-vercel-gray-400" />
+                            <span className="sr-only">Copy</span>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 rounded-md bg-vercel-gray-100 dark:bg-vercel-gray-800 hover:bg-vercel-gray-200 dark:hover:bg-vercel-gray-700"
+                            onClick={regenerateResponse}
+                            disabled={isLoading}
+                            title="Regenerate response"
+                          >
+                            <RefreshCw
+                              className={`h-3 w-3 text-vercel-gray-500 dark:text-vercel-gray-400 ${isLoading ? "animate-spin" : ""}`}
+                            />
+                            <span className="sr-only">Regenerate</span>
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

@@ -5,7 +5,7 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Search, Plus, Trash2, Menu, X, Settings, LogOut, Moon, Sun } from "lucide-react"
+import { Search, Plus, Trash2, Menu, X, LogOut, User } from "lucide-react"
 import Link from "next/link"
 import { useMobile } from "@/hooks/use-mobile"
 import { toast } from "@/hooks/use-toast"
@@ -14,6 +14,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { UnochatLogo } from "./unochat-logo"
+import { useAuth } from "@/components/stack-auth-provider"
+import { useRouter } from "next/navigation"
 
 type Conversation = {
   id: number
@@ -35,6 +37,9 @@ export function Sidebar({ userId, currentConversationId }: SidebarProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const { theme, setTheme } = useTheme()
   const isDarkMode = theme === "dark"
+  const router = useRouter()
+
+  const { user, isLoading: authLoading, login, logout } = useAuth()
 
   // Fetch conversations
   useEffect(() => {
@@ -148,6 +153,10 @@ export function Sidebar({ userId, currentConversationId }: SidebarProps) {
   const filteredConversations = conversations.filter((conv) =>
     conv.title.toLowerCase().includes(searchTerm.toLowerCase()),
   )
+
+  const handleLogin = () => {
+    router.push("/auth/login")
+  }
 
   if (isMobile && !isOpen) {
     return (
@@ -266,43 +275,38 @@ export function Sidebar({ userId, currentConversationId }: SidebarProps) {
       </ScrollArea>
 
       <div className="mt-auto p-3 space-y-2">
-        <div className="flex items-center justify-between px-2 py-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="rounded-md hover:bg-vercel-gray-200 dark:hover:bg-vercel-gray-800"
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          >
-            {theme === "dark" ? (
-              <Sun className="h-5 w-5 text-vercel-gray-300" />
-            ) : (
-              <Moon className="h-5 w-5 text-vercel-gray-600" />
-            )}
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="icon"
-            className="rounded-md hover:bg-vercel-gray-200 dark:hover:bg-vercel-gray-800"
-          >
-            <Settings className="h-5 w-5 text-vercel-gray-500 dark:text-vercel-gray-400" />
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="icon"
-            className="rounded-md hover:bg-vercel-gray-200 dark:hover:bg-vercel-gray-800"
-          >
-            <LogOut className="h-5 w-5 text-vercel-gray-500 dark:text-vercel-gray-400" />
-          </Button>
+        <div className="flex items-center justify-center px-2 py-1">
+          {user ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-md hover:bg-vercel-gray-200 dark:hover:bg-vercel-gray-800"
+              onClick={logout}
+            >
+              <LogOut className="h-5 w-5 text-vercel-gray-500 dark:text-vercel-gray-400" />
+              <span className="sr-only">Log out</span>
+            </Button>
+          ) : null}
         </div>
 
-        <Button
-          variant="outline"
-          className="w-full rounded-md border-vercel-gray-200 dark:border-vercel-gray-700 bg-white dark:bg-vercel-gray-900"
-        >
-          Login
-        </Button>
+        <div className="flex flex-col gap-2">
+          {user ? (
+            <div className="flex items-center justify-center gap-2 p-2 rounded-md bg-white dark:bg-vercel-gray-900 border border-vercel-gray-200 dark:border-vercel-gray-700">
+              <User className="h-4 w-4 text-vercel-gray-500 dark:text-vercel-gray-400" />
+              <span className="text-sm text-vercel-gray-700 dark:text-vercel-gray-300 truncate">
+                {user.email || "Authenticated User"}
+              </span>
+            </div>
+          ) : (
+            <Button
+              variant="outline"
+              className="w-full rounded-md border-vercel-gray-200 dark:border-vercel-gray-700 bg-white dark:bg-vercel-gray-900"
+              onClick={handleLogin}
+            >
+              Login / Sign Up
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   )
