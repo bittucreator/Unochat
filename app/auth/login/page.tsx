@@ -56,8 +56,9 @@ export default function LoginPage() {
               <button
                 id="stack-auth-button"
                 data-project-id={process.env.NEXT_PUBLIC_STACK_PROJECT_ID}
-                data-redirect-url={`${typeof window !== "undefined" ? window.location.origin : ""}/auth/callback?redirectTo=${redirectTo}`}
+                data-redirect-url="/auth/callback"
                 data-provider="google"
+                data-mode="signin"
                 className="w-full flex items-center justify-center gap-3 py-2.5 px-4 border border-vercel-gray-200 dark:border-vercel-gray-700 rounded-md shadow-sm text-sm font-medium text-vercel-fg dark:text-white bg-white dark:bg-vercel-gray-900 hover:bg-vercel-gray-50 dark:hover:bg-vercel-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors"
               >
                 <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
