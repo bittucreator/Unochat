@@ -1,13 +1,14 @@
-# TooliQ
+# Unochat
 
-TooliQ is a web application that helps designers and developers convert websites to Figma designs and Next.js code.
+Unochat is now open source! 🎉
+
+Unochat is an AI chat application designed to provide intelligent and seamless conversational experiences. As an open-source project, we welcome contributions and collaboration from the community.
 
 ## Features
 
-- Convert websites to Figma designs
-- Convert websites to Next.js code
-- Customize generated code with various options
-- Download generated code as a ZIP file
+- AI-powered chat experience
+- Seamless conversation interface
+- Open-source and community-driven
 
 ## Getting Started
 
@@ -15,61 +16,37 @@ TooliQ is a web application that helps designers and developers convert websites
 
 - Node.js 18 or later
 - npm or yarn
-- A Figma developer account (for Figma API integration)
 
 ### Installation
 
 1. Clone the repository:
-   \`\`\`bash
-   git clone https://github.com/yourusername/tooliq.git
-   cd tooliq
-   \`\`\`
+   ```bash
+   git clone https://github.com/bittucreator/Unochat.git
+   cd Unochat
+   ```
 
 2. Install dependencies:
-   \`\`\`bash
+   ```bash
    npm install
    # or
    yarn install
-   \`\`\`
+   ```
 
 3. Set up environment variables:
-   Create a `.env.local` file in the root directory with the following variables:
-   \`\`\`
-   # Figma API Configuration
-   FIGMA_CLIENT_ID=your_figma_client_id
-   FIGMA_CLIENT_SECRET=your_figma_client_secret
-   FIGMA_REDIRECT_URI=http://localhost:3000/api/figma/callback
-
-   # Website Analysis API (for future implementation)
-   WEBSITE_ANALYSIS_API_KEY=your_analysis_api_key
-
-   # Application Configuration
-   NEXT_PUBLIC_APP_URL=http://localhost:3000
-   NEXT_PUBLIC_APP_NAME=TooliQ
-   \`\`\`
+   Create a `.env.local` file in the root directory with the required variables.
 
 4. Run the development server:
-   \`\`\`bash
+   ```bash
    npm run dev
    # or
    yarn dev
-   \`\`\`
+   ```
 
 5. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## Environment Variables
 
-### Required Variables
-
-- `FIGMA_CLIENT_ID`: Your Figma OAuth client ID
-- `FIGMA_CLIENT_SECRET`: Your Figma OAuth client secret
-- `FIGMA_REDIRECT_URI`: The redirect URI for Figma OAuth (e.g., http://localhost:3000/api/figma/callback)
-
-### Optional Variables
-
-- `WEBSITE_ANALYSIS_API_KEY`: API key for website analysis (for future implementation)
-- `NEXT_PUBLIC_APP_URL`: The URL of your application
-- `NEXT_PUBLIC_APP_NAME`: The name of your application
+Add your required environment variables in the `.env.local` file.
 
 ## Deployment
 
