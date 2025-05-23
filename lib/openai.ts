@@ -24,25 +24,33 @@ export async function generateChatCompletion(
   } = options
 
   // Validate environment variables
-  if (!process.env.AZURE_OPENAI_API_ENDPOINT) {
-    throw new Error("AZURE_OPENAI_API_ENDPOINT environment variable is not set")
+  if (!process.env.AZURE_OPENAI_ENDPOINT) {
+    throw new Error("AZURE_OPENAI_ENDPOINT environment variable is not set")
   }
   if (!process.env.AZURE_OPENAI_API_KEY) {
     throw new Error("AZURE_OPENAI_API_KEY environment variable is not set")
   }
-  if (!process.env.AZURE_OPENAI_API_DEPLOYMENT_NAME) {
-    throw new Error("AZURE_OPENAI_API_DEPLOYMENT_NAME environment variable is not set")
+  if (!process.env.AZURE_OPENAI_DEPLOYMENT) {
+    throw new Error("AZURE_OPENAI_DEPLOYMENT environment variable is not set")
   }
 
-  const endpoint = process.env.AZURE_OPENAI_API_ENDPOINT.trim()
+  const endpoint = process.env.AZURE_OPENAI_ENDPOINT.trim()
   const apiKey = process.env.AZURE_OPENAI_API_KEY.trim()
-  const deploymentName = process.env.AZURE_OPENAI_API_DEPLOYMENT_NAME.trim()
+  const deploymentName = model || process.env.AZURE_OPENAI_DEPLOYMENT.trim()
 
-  // Ensure endpoint doesn't end with a slash
-  const baseEndpoint = endpoint.endsWith("/") ? endpoint.slice(0, -1) : endpoint
+  // If endpoint already contains query params, don't add them again
+  let apiUrl: string
+  if (endpoint.includes("chat/completions?")) {
+    // Replace deployment name in endpoint if present
+    apiUrl = endpoint.replace(/deployment=[^&]*/, `deployment=${deploymentName}`)
+  } else {
+    apiUrl = `${endpoint}/openai/deployments/${deploymentName}/chat/completions?api-version=2023-05-15`
+  }
 
-  // Construct the API URL - using the 2023-05-15 API version which is widely supported
-  const apiUrl = `${baseEndpoint}/openai/deployments/${deploymentName}/chat/completions?api-version=2023-05-15`
+  // Ensure apiUrl is a valid Azure OpenAI endpoint
+  if (!apiUrl.includes("openai") || !apiUrl.includes("chat/completions")) {
+    throw new Error("AZURE_OPENAI_ENDPOINT is not a valid Azure OpenAI chat completions endpoint.")
+  }
 
   try {
     console.log(`Calling Azure OpenAI API at: ${apiUrl} with model: ${deploymentName}`)
@@ -61,6 +69,13 @@ export async function generateChatCompletion(
       }),
       signal,
     })
+
+    // If the response is HTML, throw a clear error
+    const contentType = response.headers.get("content-type") || ""
+    if (contentType.includes("text/html")) {
+      const text = await response.text()
+      throw new Error(`Azure OpenAI endpoint returned HTML instead of JSON. Check your endpoint URL and deployment name. Response: ${text.slice(0, 200)}`)
+    }
 
     if (!response.ok) {
       let errorMessage = `Azure OpenAI API error: ${response.status} ${response.statusText}`
@@ -162,15 +177,14 @@ export async function* streamChatCompletion(
 
 // Helper function to validate Azure OpenAI configuration
 export function validateAzureOpenAIConfig(): { isValid: boolean; error?: string } {
-  if (!process.env.AZURE_OPENAI_API_ENDPOINT) {
-    return { isValid: false, error: "AZURE_OPENAI_API_ENDPOINT environment variable is not set" }
+  if (!process.env.AZURE_OPENAI_ENDPOINT) {
+    return { isValid: false, error: "AZURE_OPENAI_ENDPOINT environment variable is not set" }
   }
   if (!process.env.AZURE_OPENAI_API_KEY) {
     return { isValid: false, error: "AZURE_OPENAI_API_KEY environment variable is not set" }
   }
-  if (!process.env.AZURE_OPENAI_API_DEPLOYMENT_NAME) {
-    return { isValid: false, error: "AZURE_OPENAI_API_DEPLOYMENT_NAME environment variable is not set" }
+  if (!process.env.AZURE_OPENAI_DEPLOYMENT) {
+    return { isValid: false, error: "AZURE_OPENAI_DEPLOYMENT environment variable is not set" }
   }
-
   return { isValid: true }
 }

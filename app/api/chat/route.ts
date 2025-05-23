@@ -60,6 +60,17 @@ export async function POST(req: NextRequest) {
     // Check if streaming is requested
     const stream = req.headers.get("accept")?.includes("text/event-stream")
 
+    // Only allow Azure OpenAI models, not direct Grok
+    const isGrok = model && model.toLowerCase().includes("grok")
+    if (isGrok) {
+      return NextResponse.json({
+        error: "Direct Grok API is not supported. Please use an Azure OpenAI deployment.",
+        details: "Your selected model appears to be a Grok model. Only Azure OpenAI deployments are supported.",
+      })
+    }
+    const chatFn = generateChatCompletion
+    // For streaming, you could add a streamGrokCompletion if Grok supports SSE
+
     if (stream) {
       // For streaming responses
       const encoder = new TextEncoder()
@@ -109,7 +120,7 @@ export async function POST(req: NextRequest) {
     } else {
       // For non-streaming responses
       try {
-        const response = await generateChatCompletion(formattedMessages, {
+        const response = await chatFn(formattedMessages, {
           model: model,
           temperature: 0.7,
           max_tokens: 1000,

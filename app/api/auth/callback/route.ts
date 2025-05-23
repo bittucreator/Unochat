@@ -10,22 +10,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Exchange code for token
-    const tokenResponse = await fetch("https://api.stackauth.net/v1/token", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        code,
-        project_id: process.env.NEXT_PUBLIC_STACK_PROJECT_ID,
-        secret_key: process.env.STACK_SECRET_SERVER_KEY,
-      }),
-    })
-
-    if (!tokenResponse.ok) {
-      throw new Error("Failed to exchange code for token")
-    }
+    // Google Auth callback logic will be added here
 
     // Redirect to the original page or home
     return NextResponse.redirect(new URL(state || "/", request.url))

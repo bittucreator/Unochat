@@ -5,7 +5,6 @@ import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
 import { initializeDatabase } from "@/lib/db-init"
-import { StackAuthProvider } from "@/components/stack-auth-provider"
 
 export const metadata = {
   title: "unochat - The Ultimate AI Chat Platform",
@@ -35,7 +34,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning className={`${GeistSans.variable} ${GeistMono.variable}`}>
       <body className={GeistSans.className}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-          <StackAuthProvider>{children}</StackAuthProvider>
+          {children}
           <Toaster />
         </ThemeProvider>
       </body>

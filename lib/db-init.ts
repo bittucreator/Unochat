@@ -48,6 +48,25 @@ export async function initializeDatabase() {
         )
       `)
 
+      // Add users and sessions table creation if not exists
+      await executeQuery(`
+        CREATE TABLE IF NOT EXISTS users (
+          id SERIAL PRIMARY KEY,
+          name TEXT NOT NULL,
+          email TEXT UNIQUE NOT NULL,
+          picture TEXT
+        )
+      `)
+      await executeQuery(`
+        CREATE TABLE IF NOT EXISTS sessions (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+          session_token TEXT UNIQUE NOT NULL,
+          refresh_token TEXT UNIQUE NOT NULL,
+          expires_at TIMESTAMP WITH TIME ZONE NOT NULL
+        )
+      `)
+
       // Create indexes for better performance
       await executeQuery(`CREATE INDEX IF NOT EXISTS idx_conversations_user_id ON conversations(user_id)`)
       await executeQuery(`CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON messages(conversation_id)`)
