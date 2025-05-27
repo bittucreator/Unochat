@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(rows);
   } catch (err) {
     console.error('[API/messages GET] Error:', err);
-    return NextResponse.json({ error: "Database error: " + (err as Error).message }, { status: 500 });
+    return NextResponse.json({ error: "Database error" }, { status: 500 });
   }
 }
 
@@ -72,9 +72,8 @@ export async function POST(req: NextRequest) {
       console.error('[API/messages POST] chatId does not exist:', chatId);
       return NextResponse.json({ error: "chatId does not exist" }, { status: 400 });
     }
-  } catch (err) {
-    console.error('[API/messages POST] chatId lookup error:', err);
-    return NextResponse.json({ error: "Database error during chatId lookup: " + (err as Error).message }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: "Database error during chatId lookup" }, { status: 500 });
   }
   try {
     const { rows } = await pool.query(
@@ -88,7 +87,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(rows[0]);
   } catch (err) {
     console.error('[API/messages POST] SQL error:', err, { chatId, userId, role, content });
-    return NextResponse.json({ error: "Database error: " + (err as Error).message }, { status: 500 });
+    return NextResponse.json({ error: "Database error" }, { status: 500 });
   }
 }
 
@@ -120,8 +119,8 @@ export async function PATCH(req: NextRequest) {
       [content, id]
     );
     return NextResponse.json(update.rows[0]);
-  } catch (err) {
-    return NextResponse.json({ error: "Database error: " + (err as Error).message }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: "Database error" }, { status: 500 });
   }
 }
 
@@ -148,7 +147,7 @@ export async function DELETE(req: NextRequest) {
     }
     await pool.query("UPDATE messages SET deleted = true WHERE id = $1", [id]);
     return NextResponse.json({ success: true });
-  } catch (err) {
-    return NextResponse.json({ error: "Database error: " + (err as Error).message }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: "Database error" }, { status: 500 });
   }
 }

@@ -1,15 +1,12 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Pencil, Trash2, RefreshCw, Mail, ListTodo, Languages, FileText, Sparkles, UserCircle, CheckCircle2, PlusCircle, Copy } from 'lucide-react';
+import { Pencil, Trash2, RefreshCw, Mail, ListTodo, Languages, FileText, UserCircle, Copy } from 'lucide-react';
 import { useSession, signOut } from "next-auth/react";
-
-const RichTextEditor = dynamic(() => import("@/components/ui/rich-text-editor"), { ssr: false });
 
 const EXAMPLES = [
   "Summarize this text...",
@@ -26,17 +23,6 @@ interface ChatItem {
   title: string;
 }
 
-// Task item type
-interface TaskItem {
-  id: string;
-  chatid: string;
-  type: string;
-  status: string;
-  payload: string | null;
-  createdat: string;
-  updatedat: string;
-}
-
 // Message type now includes createdAt (optional)
 type MessageItem = { role: 'user' | 'assistant'; content: string; createdAt?: string };
 
@@ -51,7 +37,6 @@ export default function Home() {
   const [renameValue, setRenameValue] = useState("");
   const [regenerating, setRegenerating] = useState(false);
   const { data: session, status } = useSession();
-  const [tasks, setTasks] = useState<TaskItem[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const [showCopied, setShowCopied] = useState(false);
 
@@ -67,26 +52,12 @@ export default function Home() {
     }
   }, [session]);
 
-  // Only fetch tasks if authenticated
-  useEffect(() => {
-    if (session && session.user && selectedConversationId) {
-      fetch(`/api/tasks?chatId=${selectedConversationId}`)
-        .then(res => res.json())
-        .then(data => setTasks(data || []));
-    } else {
-      setTasks([]);
-    }
-  }, [selectedConversationId, session]);
-
   function handleSelectConversation(id: string) {
     setSelectedConversationId(id);
     if (session && session.user) {
       fetch(`/api/messages?chatId=${id}`)
         .then(res => res.json())
-        .then(data => setMessages((data || []).map((m: any) => ({ role: m.role, content: m.content, createdAt: m.createdat }))));
-      fetch(`/api/tasks?chatId=${id}`)
-        .then(res => res.json())
-        .then(data => setTasks(data || []));
+        .then(data => setMessages((data || []).map((m: { role: 'user' | 'assistant'; content: string; createdat?: string }) => ({ role: m.role, content: m.content, createdAt: m.createdat }))));
     }
   }
 
@@ -162,11 +133,11 @@ export default function Home() {
         setError("Failed to load messages for this chat.");
         allMsgs = [];
       }
-    } catch (e) {
+    } catch {
       setError("Failed to parse messages response.");
       allMsgs = [];
     }
-    setMessages((allMsgs || []).map((m: any) => ({ role: m.role, content: m.content, createdAt: m.createdat })));
+    setMessages((allMsgs || []).map((m: { role: 'user' | 'assistant'; content: string; createdat?: string }) => ({ role: m.role, content: m.content, createdAt: m.createdat })));
     setInput("");
     try {
       // Add timeout for AI response
@@ -191,12 +162,12 @@ export default function Home() {
         const updatedMsgsRes = await fetch(`/api/messages?chatId=${chatId}`);
         let updatedMsgs = await updatedMsgsRes.json();
         if (!Array.isArray(updatedMsgs)) updatedMsgs = [];
-        setMessages((updatedMsgs || []).map((m: any) => ({ role: m.role, content: m.content, createdAt: m.createdat })));
+        setMessages((updatedMsgs || []).map((m: { role: 'user' | 'assistant'; content: string; createdat?: string }) => ({ role: m.role, content: m.content, createdAt: m.createdat })));
       } else if ((data as any).error) {
         setError((data as any).error);
       }
-    } catch (e: any) {
-      setError(e.message || "Failed to connect to AI service.");
+    } catch (e: unknown) {
+      setError((e as Error).message || "Failed to connect to AI service.");
     } finally {
       setLoading(false);
     }
@@ -232,12 +203,12 @@ export default function Home() {
         // Reload messages
         const updatedMsgsRes = await fetch(`/api/messages?chatId=${selectedConversationId}`);
         const updatedMsgs = await updatedMsgsRes.json();
-        setMessages((updatedMsgs || []).map((m: any) => ({ role: m.role, content: m.content, createdAt: m.createdat })));
+        setMessages((updatedMsgs || []).map((m: { role: 'user' | 'assistant'; content: string; createdat?: string }) => ({ role: m.role, content: m.content, createdAt: m.createdat })));
       } else if ((data as any).error) {
         setError((data as any).error);
       }
-    } catch (e: any) {
-      setError(e.message || "Failed to connect to AI service.");
+    } catch (e: unknown) {
+      setError((e as Error).message || "Failed to connect to AI service.");
     } finally {
       setRegenerating(false);
     }
@@ -252,17 +223,6 @@ export default function Home() {
     if (e.key === "Enter" && !loading) {
       handleSend();
     }
-  }
-
-  async function handleAddTask() {
-    if (!selectedConversationId || !session || !session.user) return;
-    const res = await fetch('/api/tasks', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chatId: selectedConversationId, userId: session.user.email, type: 'todo', status: 'pending', payload: 'New Task' }),
-    });
-    const task = await res.json();
-    setTasks(prev => [task, ...prev]);
   }
 
   // Block UI for unauthenticated users
@@ -330,25 +290,6 @@ export default function Home() {
             </div>
           ))}
         </div>
-        {/* Tasks Section (hidden for now) */}
-        {/*
-        <div className="mt-4">
-          <div className="flex items-center justify-between mb-1">
-            <span className="font-semibold text-base">Tasks</span>
-            <Button size="icon" variant="ghost" onClick={handleAddTask} title="Add Task"><PlusCircle className="w-5 h-5" /></Button>
-          </div>
-          <div className="space-y-2 max-h-40 overflow-y-auto">
-            {tasks.length === 0 && <div className="text-xs text-muted-foreground">No tasks for this chat.</div>}
-            {tasks.map(task => (
-              <div key={task.id} className="flex items-center gap-2 p-2 rounded bg-gray-100 dark:bg-gray-800">
-                <CheckCircle2 className={`w-4 h-4 ${task.status === 'completed' ? 'text-green-500' : 'text-gray-400'}`} />
-                <span className="text-xs font-mono flex-1">{task.payload}</span>
-                <span className="text-[10px] text-muted-foreground">{new Date(task.createdat).toLocaleDateString()}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-        */}
         <div className="mt-auto pt-4 border-t border-border flex flex-col items-center">
           {session && session.user ? (
             <div className="w-full flex flex-col items-center gap-2 mb-2">
