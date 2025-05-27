@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { Pool } from "@neondatabase/serverless";
 import { validate as validateUUID } from 'uuid';
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "../auth/[...nextauth]/route";
 
 const pool = new Pool({
   connectionString: process.env.NEON_DB_URL,
@@ -11,7 +10,7 @@ const pool = new Pool({
 
 // GET /api/messages?chatId=...
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -38,7 +37,7 @@ export async function GET(req: NextRequest) {
 
 // POST /api/messages (create a new message)
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -92,7 +91,7 @@ export async function POST(req: NextRequest) {
 
 // PATCH /api/messages (edit a message)
 export async function PATCH(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -125,7 +124,7 @@ export async function PATCH(req: NextRequest) {
 
 // SOFT DELETE: set deleted=true instead of removing
 export async function DELETE(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
