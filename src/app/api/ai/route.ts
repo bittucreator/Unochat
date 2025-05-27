@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
 
   const endpoint = process.env.AZURE_OPENAI_ENDPOINT;
   const apiKey = process.env.AZURE_OPENAI_API_KEY;
-  const deployment = model || process.env.AZURE_OPENAI_DEPLOYMENT;
+  const deployment = model || process.env.AZURE_OPENAI_DEPLOYMENT_NAME;
 
   if (!endpoint || !apiKey || !deployment) {
     console.error("[AI API] Missing Azure OpenAI environment variables");

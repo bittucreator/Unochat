@@ -5,7 +5,7 @@ import { authOptions } from "../auth/[...nextauth]/route";
 import { v4 as uuidv4 } from 'uuid';
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: process.env.NEON_DB_URL,
   // Neon recommends always enabling SSL
   ssl: { rejectUnauthorized: false },
 });

@@ -59,7 +59,10 @@ export default function Home() {
   useEffect(() => {
     if (session && session.user) {
       fetch("/api/chats")
-        .then((res) => res.json())
+        .then((res) => {
+          if (!res.ok) return [];
+          return res.json().catch(() => []);
+        })
         .then((data) => setConversations(data));
     }
   }, [session]);
@@ -130,6 +133,12 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: input.slice(0, 24) || "New Conversation" }),
       });
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({}));
+        setError(error?.error || "Failed to create chat.");
+        setLoading(false);
+        return;
+      }
       const chat = await res.json();
       chatId = chat.id;
       setConversations((prev) => [chat, ...prev]);
