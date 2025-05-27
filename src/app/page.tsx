@@ -123,12 +123,12 @@ export default function Home() {
       body: JSON.stringify(userMsg),
     });
     // Call AI
-    let allMsgs = [];
+    let allMsgs: MessageItem[] = [];
     try {
       const allMsgsRes = await fetch(`/api/messages?chatId=${chatId}`);
       if (allMsgsRes.ok) {
         const text = await allMsgsRes.text();
-        allMsgs = text ? JSON.parse(text) : [];
+        allMsgs = text ? (JSON.parse(text) as MessageItem[]) : [];
       } else {
         setError("Failed to load messages for this chat.");
         allMsgs = [];
@@ -137,7 +137,7 @@ export default function Home() {
       setError("Failed to parse messages response.");
       allMsgs = [];
     }
-    setMessages((allMsgs || []).map((m: { role: 'user' | 'assistant'; content: string; createdat?: string }) => ({ role: m.role, content: m.content, createdAt: m.createdat })));
+    setMessages((allMsgs || []).map((m) => ({ role: m.role, content: m.content, createdAt: m.createdAt })));
     setInput("");
     try {
       // Add timeout for AI response
@@ -145,14 +145,14 @@ export default function Home() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: [...allMsgs, { role: 'user', content: input }] }),
-      }).then(res => res.json());
+      }).then((res): Promise<{ result?: string; error?: string }> => res.json());
       const timeoutPromise = new Promise<{ result?: string; error?: string }>((_, reject) =>
         setTimeout(() => reject(new Error("AI response timed out. Please try again.")), 20000)
       );
-      const data = await Promise.race([aiPromise, timeoutPromise]);
-      if ((data as any).result) {
+      const data: { result?: string; error?: string } = await Promise.race([aiPromise, timeoutPromise]);
+      if (data.result) {
         // Save assistant message
-        const agentMsg = { chatId, role: 'assistant', content: (data as any).result };
+        const agentMsg = { chatId, role: 'assistant', content: data.result };
         await fetch('/api/messages', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -160,14 +160,14 @@ export default function Home() {
         });
         // Reload messages
         const updatedMsgsRes = await fetch(`/api/messages?chatId=${chatId}`);
-        let updatedMsgs = await updatedMsgsRes.json();
+        let updatedMsgs: MessageItem[] = await updatedMsgsRes.json();
         if (!Array.isArray(updatedMsgs)) updatedMsgs = [];
-        setMessages((updatedMsgs || []).map((m: { role: 'user' | 'assistant'; content: string; createdat?: string }) => ({ role: m.role, content: m.content, createdAt: m.createdat })));
-      } else if ((data as any).error) {
-        setError((data as any).error);
+        setMessages((updatedMsgs || []).map((m) => ({ role: m.role, content: m.content, createdAt: m.createdAt })));
+      } else if (data.error) {
+        setError(data.error);
       }
-    } catch (e: unknown) {
-      setError((e as Error).message || "Failed to connect to AI service.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to connect to AI service.");
     } finally {
       setLoading(false);
     }
@@ -192,9 +192,9 @@ export default function Home() {
         setTimeout(() => reject(new Error("AI response timed out. Please try again.")), 20000)
       );
       const data = await Promise.race([aiPromise, timeoutPromise]);
-      if ((data as any).result) {
+      if ((data as { result?: string; error?: string }).result) {
         // Save regenerated assistant message
-        const agentMsg = { chatId: selectedConversationId, role: 'assistant', content: (data as any).result };
+        const agentMsg = { chatId: selectedConversationId, role: 'assistant', content: (data as { result?: string; error?: string }).result };
         await fetch('/api/messages', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -204,8 +204,8 @@ export default function Home() {
         const updatedMsgsRes = await fetch(`/api/messages?chatId=${selectedConversationId}`);
         const updatedMsgs = await updatedMsgsRes.json();
         setMessages((updatedMsgs || []).map((m: { role: 'user' | 'assistant'; content: string; createdat?: string }) => ({ role: m.role, content: m.content, createdAt: m.createdat })));
-      } else if ((data as any).error) {
-        setError((data as any).error);
+      } else if ((data as { result?: string; error?: string }).error) {
+        setError((data as { result?: string; error?: string }).error!);
       }
     } catch (e: unknown) {
       setError((e as Error).message || "Failed to connect to AI service.");

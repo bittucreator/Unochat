@@ -85,8 +85,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Failed to insert message" }, { status: 500 });
     }
     return NextResponse.json(rows[0]);
-  } catch (err) {
-    console.error('[API/messages POST] SQL error:', err, { chatId, userId, role, content });
+  } catch {
     return NextResponse.json({ error: "Database error" }, { status: 500 });
   }
 }
@@ -100,7 +99,7 @@ export async function PATCH(req: NextRequest) {
   let body;
   try {
     body = await req.json();
-  } catch (err) {
+  } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
   const { id, content } = body;
@@ -133,7 +132,7 @@ export async function DELETE(req: NextRequest) {
   let body;
   try {
     body = await req.json();
-  } catch (err) {
+  } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
   const { id } = body;
