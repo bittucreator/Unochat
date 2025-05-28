@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Pool } from "@neondatabase/serverless";
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "../../../../../lib/authOptions";
+
 
 const pool = new Pool({
   connectionString: process.env.NEON_DB_URL,
@@ -15,8 +16,6 @@ const NOTION_REDIRECT_URI = process.env.NOTION_REDIRECT_URI!;
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url!);
   const code = searchParams.get("code");
-  const state = searchParams.get("state");
-  // TODO: Validate state with session/cookie for CSRF protection
 
   if (!code) {
     // Step 1: Redirect to Notion OAuth

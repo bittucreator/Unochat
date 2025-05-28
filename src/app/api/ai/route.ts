@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   const { prompt, messages, model, selectedIntegration } = body;
 
   // Fetch user integration tokens from DB if needed
-  let userIntegrations: { notion_token?: string; notion_database_id?: string; linear_token?: string } = {};
+  const userIntegrations: { notion_token?: string; notion_database_id?: string; linear_token?: string } = {};
   if (session.user?.email) {
     // Neon DB query (Postgres)
     const dbRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ''}/api/integrations/status`, {
@@ -31,13 +31,19 @@ export async function POST(req: NextRequest) {
     });
     if (dbRes.ok) {
       const integrations = await dbRes.json();
-      integrations.forEach((intg: any) => {
+      integrations.forEach((intg: Record<string, unknown>) => {
         if (intg.key === 'notion' && intg.connected) {
-          userIntegrations.notion_token = intg.token;
-          userIntegrations.notion_database_id = intg.database_id;
+          if (typeof intg.token === 'string') {
+            userIntegrations.notion_token = intg.token;
+          }
+          if (typeof intg.database_id === 'string') {
+            userIntegrations.notion_database_id = intg.database_id;
+          }
         }
         if (intg.key === 'linear' && intg.connected) {
-          userIntegrations.linear_token = intg.token;
+          if (typeof intg.token === 'string') {
+            userIntegrations.linear_token = intg.token;
+          }
         }
       });
     }
@@ -183,7 +189,7 @@ export async function POST(req: NextRequest) {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            query: `mutation CreateIssue($input: IssueCreateInput!) { issueCreate(input: $input) { issue { id identifier url title } } }`,
+            query: `mutation CreateIssue($input: IssueCreateInput!) { issueCreate(input: $input) { issue { id identifier url title } } }}`,
             variables: {
               input: {
                 title: prompt || 'AI Task',

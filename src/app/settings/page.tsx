@@ -7,6 +7,13 @@ const initialIntegrations = [
 	{ name: "Notion", key: "notion", connected: false },
 ];
 
+// Example type for integration status
+interface IntegrationStatus {
+  key: string;
+  connected: boolean;
+  notion_database_id?: string;
+}
+
 export default function SettingsPage() {
 	const [showIntegrations, setShowIntegrations] = useState(false);
 	const [integrations, setIntegrations] = useState(initialIntegrations);
@@ -14,7 +21,7 @@ export default function SettingsPage() {
 	const [integrationMsg, setIntegrationMsg] = useState<string>("");
 
 	// Add state for Notion databases and selected database
-	const [notionDatabases, setNotionDatabases] = useState<any[]>([]);
+	const [notionDatabases, setNotionDatabases] = useState<unknown[]>([]);
 	const [selectedNotionDb, setSelectedNotionDb] = useState<string>("");
 
 	// Fetch integration status from backend
@@ -33,7 +40,8 @@ export default function SettingsPage() {
 				if (data && Array.isArray(data)) {
 					setIntegrations((prev) =>
 						prev.map((intg) => {
-							const found = data.find((d: any) => d.key === intg.key);
+							// Replace (d as any) with type guard
+							const found = data.find((d: unknown): d is IntegrationStatus => typeof d === 'object' && d !== null && 'key' in d && 'connected' in d && typeof (d as IntegrationStatus).key === 'string' && (d as IntegrationStatus).key === intg.key);
 							return found ? { ...intg, connected: found.connected } : intg;
 						})
 					);
@@ -58,7 +66,8 @@ export default function SettingsPage() {
 			fetch("/api/integrations/status")
 				.then((res) => res.json())
 				.then((data) => {
-					const notion = data.find((d: any) => d.key === "notion");
+					// Replace (d as any) with type guard for Notion
+					const notion = data.find((d: unknown): d is IntegrationStatus => typeof d === 'object' && d !== null && 'key' in d && (d as IntegrationStatus).key === "notion");
 					if (notion && notion.notion_database_id) {
 						setSelectedNotionDb(notion.notion_database_id);
 					}
@@ -107,7 +116,14 @@ export default function SettingsPage() {
 				if (data && Array.isArray(data)) {
 					setIntegrations((prev) =>
 						prev.map((intg) => {
-							const found = data.find((d: any) => d.key === intg.key);
+							const found = data.find(
+								(d: unknown): d is IntegrationStatus =>
+									typeof d === 'object' &&
+									d !== null &&
+									'key' in d &&
+									typeof (d as IntegrationStatus).key === 'string' &&
+									(d as IntegrationStatus).key === intg.key
+							);
 							return found ? { ...intg, connected: found.connected } : intg;
 						})
 					);
@@ -209,11 +225,18 @@ export default function SettingsPage() {
 												onChange={(e) => setSelectedNotionDb(e.target.value)}
 											>
 												<option value="">-- Select a database --</option>
-												{notionDatabases.map((db: any) => (
-													<option key={db.id} value={db.id}>
-														{db.title?.[0]?.plain_text || db.id}
-													</option>
-												))}
+												{notionDatabases.map((db) => {
+  if (typeof db === 'object' && db !== null && 'id' in db) {
+    const dbId = (db as { id: string }).id;
+    const dbTitle = (typeof db === 'object' && db !== null && 'title' in db && Array.isArray((db as { title?: { plain_text?: string }[] }).title) && (db as { title?: { plain_text?: string }[] }).title?.[0]?.plain_text)
+      ? (db as { title: { plain_text: string }[] }).title[0].plain_text
+      : dbId;
+    return (
+      <option key={dbId} value={dbId}>{dbTitle}</option>
+    );
+  }
+  return null;
+})}
 											</select>
 										</div>
 									)}

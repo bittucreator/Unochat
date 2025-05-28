@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Pencil, Trash2, RefreshCw, Mail, ListTodo, Languages, FileText, UserCircle, Copy, BookCopy, Settings, ExternalLink, Edit2, BadgeCheck } from 'lucide-react';
+import { Pencil, Trash2, RefreshCw, ExternalLink, Edit2, BadgeCheck, UserCircle, Copy, Settings } from 'lucide-react';
 import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
+import Image from 'next/image';
 
 // Add generic SVGs for Notion/Linear badges (move to top)
 const NotionIcon = () => (
@@ -18,6 +19,12 @@ const LinearIcon = () => (
 );
 
 // --- Types ---
+interface ChatItem {
+  id: string;
+  title: string;
+}
+type MessageItem = { role: 'user' | 'assistant'; content: string; createdAt?: string };
+
 type CreatedItem = {
   id: string;
   type: 'notion' | 'linear';
@@ -40,29 +47,17 @@ const integrationTemplates: Record<string, { label: string; value: string; icon:
   ],
 };
 
-const EXAMPLES = [
-  "Summarize this text...",
-  "Write a short email to my team about project status.",
-  "What are the top 3 news headlines today?",
-  "Generate a todo list for moving to a new city.",
-  "Explain quantum computing in simple terms.",
-  "Translate 'Hello, how are you?' to French."
-];
-
-// Sidebar chat item type
-interface ChatItem {
-  id: string;
-  title: string;
+// Place IntegrationStatus type at the top
+interface IntegrationStatus {
+  key: string;
+  connected: boolean;
+  database_id?: string;
 }
 
-// Message type now includes createdAt (optional)
-type MessageItem = { role: 'user' | 'assistant'; content: string; createdAt?: string };
-
-export default function Home() {
+const Home = () => {
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const [conversations, setConversations] = useState<ChatItem[]>([]);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -70,12 +65,9 @@ export default function Home() {
   const [regenerating, setRegenerating] = useState(false);
   const { data: session, status } = useSession();
   const inputRef = useRef<HTMLInputElement>(null);
-  const [showCopied, setShowCopied] = useState(false);
 
   // Add state for Notion sending
   const [notionLoading, setNotionLoading] = useState(false);
-  const [notionSuccess, setNotionSuccess] = useState(false);
-  const [notionError, setNotionError] = useState("");
 
   // --- Integrations Dropdown State ---
   const [integrationsList, setIntegrationsList] = useState<{ key: string; name: string }[]>([]);
@@ -88,18 +80,16 @@ export default function Home() {
   const historyModalRef = useRef<HTMLDivElement>(null);
 
   // Add state for created items and toasts
-  const [createdItem, setCreatedItem] = useState<{ url: string; type: 'notion' | 'linear'; label: string } | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [createdItems, setCreatedItems] = useState<CreatedItem[]>([]);
   const [editItem, setEditItem] = useState<CreatedItem | null>(null);
   const [editContent, setEditContent] = useState('');
   const [editLoading, setEditLoading] = useState(false);
-  const [autoSync, setAutoSync] = useState(false);
   const [statusToast, setStatusToast] = useState<null | { type: 'notion' | 'linear'; url: string; title: string }>(null);
   const [statusToastCopied, setStatusToastCopied] = useState(false);
 
   // --- Integration badge logic: only show badge for the message that created the item ---
-  function getCreatedItemForMessage(msg: MessageItem, idx: number) {
+  function getCreatedItemForMessage(msg: MessageItem) {
     return createdItems.find((ci: CreatedItem) => ci.chatId === (selectedConversationId || '') && (msg.content.includes(ci.url) || msg.content === ci.content));
   }
 
@@ -127,16 +117,16 @@ export default function Home() {
           return [];
         }
       })
-      .then((data) => {
+      .then((data: IntegrationStatus[]) => {
         if (data && Array.isArray(data)) {
           setIntegrationsList(
-            data.filter((d: any) => d.connected).map((d: any) => ({ key: d.key, name: d.key.charAt(0).toUpperCase() + d.key.slice(1) }))
+            data.filter((d) => d.connected).map((d) => ({ key: d.key, name: d.key.charAt(0).toUpperCase() + d.key.slice(1) }))
           );
-          setNotionConnected(!!data.find((d: any) => d.key === 'notion' && d.connected));
-          setLinearConnected(!!data.find((d: any) => d.key === 'linear' && d.connected));
+          setNotionConnected(!!data.find((d) => d.key === 'notion' && d.connected));
+          setLinearConnected(!!data.find((d) => d.key === 'linear' && d.connected));
           // Default to first connected integration
-          if (data.filter((d: any) => d.connected).length > 0) {
-            setSelectedIntegration(data.filter((d: any) => d.connected)[0].key);
+          if (data.filter((d) => d.connected).length > 0) {
+            setSelectedIntegration(data.filter((d) => d.connected)[0].key);
           }
         }
       });
@@ -185,7 +175,6 @@ export default function Home() {
   async function handleSend() {
     if (!input.trim() || !session || !session.user) return;
     setLoading(true);
-    setError("");
     let chatId = selectedConversationId;
     // If no chat selected, create a new chat first
     if (!chatId) {
@@ -195,8 +184,6 @@ export default function Home() {
         body: JSON.stringify({ title: input.slice(0, 24) || "New Conversation" }),
       });
       if (!res.ok) {
-        const error = await res.json().catch(() => ({}));
-        setError(error?.error || "Failed to create chat.");
         setLoading(false);
         return;
       }
@@ -220,11 +207,9 @@ export default function Home() {
         const text = await allMsgsRes.text();
         allMsgs = text ? (JSON.parse(text) as MessageItem[]) : [];
       } else {
-        setError("Failed to load messages for this chat.");
         allMsgs = [];
       }
     } catch {
-      setError("Failed to parse messages response.");
       allMsgs = [];
     }
     setMessages((allMsgs || []).map((m) => ({ role: m.role, content: m.content, createdAt: m.createdAt })));
@@ -271,9 +256,9 @@ export default function Home() {
         setMessages((updatedMsgs || []).map((m) => ({ role: m.role, content: m.content, createdAt: m.createdAt })));
         // Show toast and add to history if created
         if (badgeType && badgeUrl) {
-          setCreatedItem({ url: badgeUrl, type: badgeType, label: badgeLabel! });
+          setStatusToast({ type: badgeType, url: badgeUrl, title: badgeLabel! });
           setCreatedItems(prev => [{
-            id: `${badgeType}-${Date.now()}`, // fallback id if not available
+            id: `${badgeType}-${Date.now()}`,
             type: badgeType as 'notion' | 'linear',
             url: badgeUrl!,
             title: badgeLabel || '',
@@ -282,11 +267,9 @@ export default function Home() {
             chatId: chatId || '',
           }, ...prev]);
         }
-      } else if (data.error) {
-        setError(data.error);
       }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to connect to AI service.");
+    } catch {
+      // Ignore AI service errors
     } finally {
       setLoading(false);
     }
@@ -295,7 +278,6 @@ export default function Home() {
   async function handleRegenerate() {
     if (messages.length === 0 || !selectedConversationId || !session || !session.user) return;
     setRegenerating(true);
-    setError("");
     // Remove last agent message
     const lastUserIdx = [...messages].reverse().findIndex(m => m.role === 'user');
     const lastUserIdxAbs = lastUserIdx === -1 ? messages.length - 1 : messages.length - 1 - lastUserIdx;
@@ -323,11 +305,9 @@ export default function Home() {
         const updatedMsgsRes = await fetch(`/api/messages?chatId=${selectedConversationId}`);
         const updatedMsgs = await updatedMsgsRes.json();
         setMessages((updatedMsgs || []).map((m: { role: 'user' | 'assistant'; content: string; createdat?: string }) => ({ role: m.role, content: m.content, createdAt: m.createdat })));
-      } else if ((data as { result?: string; error?: string }).error) {
-        setError((data as { result?: string; error?: string }).error!);
       }
-    } catch (e: unknown) {
-      setError((e as Error).message || "Failed to connect to AI service.");
+    } catch {
+      // Ignore AI service errors
     } finally {
       setRegenerating(false);
     }
@@ -338,14 +318,14 @@ export default function Home() {
     inputRef.current?.focus();
   }
 
-  function handleInputKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "Enter" && !loading) {
+  function handleInputKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "Enter" && !loading) {
       handleSend();
     }
   }
 
   // --- Integration Handlers ---
-  async function handleSendToLinear(target: { content: string }) {
+  const handleSendToLinear = useCallback(async (target: { content: string }) => {
     try {
       const res = await fetch("/api/integrations/linear/issues", {
         method: "POST",
@@ -364,15 +344,13 @@ export default function Home() {
         createdAt: new Date().toISOString(),
         chatId: selectedConversationId || '',
       }, ...prev]);
-    } catch (e) {
-      setError((e as Error).message || "Failed to send to Linear.");
+    } catch {
+      // Ignore errors
     }
-  }
+  }, [selectedConversationId]);
 
-  async function handleSendToNotion(target: { content: string }) {
+  const handleSendToNotion = useCallback(async (target: { content: string }) => {
     setNotionLoading(true);
-    setNotionSuccess(false);
-    setNotionError("");
     try {
       const res = await fetch("/api/integrations/notion/pages", {
         method: "POST",
@@ -380,11 +358,9 @@ export default function Home() {
         body: JSON.stringify({ message: target.content })
       });
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        setNotionError(err?.error?.message || err?.error || "Failed to send to Notion.");
+        await res.json().catch(() => ({}));
       } else {
         const data = await res.json();
-        setNotionSuccess(true);
         setStatusToast({ type: 'notion', url: data.url, title: data.title || 'Notion Page' });
         setCreatedItems(prev => [{
           id: data.id,
@@ -395,14 +371,14 @@ export default function Home() {
           createdAt: new Date().toISOString(),
           chatId: selectedConversationId || '',
         }, ...prev]);
-        setTimeout(() => setNotionSuccess(false), 1500);
+        setTimeout(() => setNotionLoading(false), 1500);
       }
-    } catch (e) {
-      setNotionError((e as Error).message || "Failed to send to Notion.");
+    } catch {
+      // Ignore errors
     } finally {
       setNotionLoading(false);
     }
-  }
+  }, [selectedConversationId]);
 
   function handleCopyLink(url: string) {
     if (navigator && navigator.clipboard) {
@@ -441,8 +417,8 @@ export default function Home() {
       }
       setCreatedItems(prev => prev.map(ci => ci.id === editItem.id ? { ...ci, content: editContent } : ci));
       handleCloseEdit();
-    } catch (e) {
-      setError((e as Error).message || 'Failed to update item.');
+    } catch {
+      // Ignore errors
     } finally {
       setEditLoading(false);
     }
@@ -463,7 +439,7 @@ export default function Home() {
 
   // --- Auto-sync chat summaries ---
   useEffect(() => {
-    if (!autoSync || !messages.length || !selectedConversationId) return;
+    if (!messages.length || !selectedConversationId) return;
     // Only sync at end of conversation (last message is assistant)
     if (messages[messages.length - 1].role === 'assistant') {
       const summary = messages.map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`).join('\n');
@@ -473,7 +449,7 @@ export default function Home() {
         handleSendToLinear({ content: `Chat summary:\n${summary}` });
       }
     }
-  }, [autoSync, messages, selectedIntegration, selectedConversationId]);
+  }, [messages, selectedIntegration, selectedConversationId, handleSendToNotion, handleSendToLinear]);
 
   // Block UI for unauthenticated users
   if (status === "loading") {
@@ -485,7 +461,7 @@ export default function Home() {
         <form method="post" action="/api/auth/signin/google">
           <input type="hidden" name="callbackUrl" value="/" />
           <Button type="submit" className="w-full flex items-center gap-2 justify-center bg-white text-black border border-gray-300 shadow hover:bg-gray-50 text-lg px-8 py-4">
-            <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-6 h-6" />
+            <Image src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" width={24} height={24} className="w-6 h-6" />
             Sign in with Google
           </Button>
         </form>
@@ -513,7 +489,7 @@ export default function Home() {
             <div key={convo.id} className="flex items-center gap-2 group">
               {renamingId === convo.id ? (
                 <form
-                  onSubmit={e => { e.preventDefault(); handleRenameConversation(convo.id); }}
+                  onSubmit={event => { event.preventDefault(); handleRenameConversation(convo.id); }}
                   className="flex-1 flex gap-1"
                 >
                   <Input
@@ -549,9 +525,11 @@ export default function Home() {
         <div className="mt-auto pt-4 border-t border-border flex flex-col items-center">
           {session && session.user ? (
             <div className="w-full flex flex-col items-center gap-2 mb-2">
-              <img
-                src={session.user.image || "https://ui-avatars.com/api/?name=" + encodeURIComponent(session.user.name || session.user.email || "User")}
+              <Image
+                src={session.user.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(session.user.name || session.user.email || "User")}`}
                 alt={session.user.name || session.user.email || "User"}
+                width={40}
+                height={40}
                 className="w-10 h-10 rounded-full border border-gray-300 shadow"
               />
               <div className="text-sm font-semibold text-center truncate max-w-[90%]">{session.user.name || session.user.email}</div>
@@ -599,7 +577,7 @@ export default function Home() {
                     {msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString() : ''}
                   </div>
                   {/* Integration badge if this message created a Notion/Linear item */}
-                  {(() => { const ci = getCreatedItemForMessage(msg, i); return ci ? (
+                  {(() => { const ci = getCreatedItemForMessage(msg); return ci ? (
                     <span className="absolute left-2 top-2" aria-label={ci.type === 'notion' ? 'Notion badge' : 'Linear badge'}>
                       {ci.type === 'notion' ? <NotionIcon /> : <LinearIcon />}
                     </span>
@@ -614,8 +592,8 @@ export default function Home() {
                         onClick={() => {
                           if (navigator && navigator.clipboard) {
                             navigator.clipboard.writeText(msg.content);
-                            setShowCopied(true);
-                            setTimeout(() => setShowCopied(false), 1200);
+                            setStatusToastCopied(true);
+                            setTimeout(() => setStatusToastCopied(false), 1200);
                           }
                         }}
                       >
@@ -798,3 +776,5 @@ export default function Home() {
     </div>
   );
 }
+
+export default Home;

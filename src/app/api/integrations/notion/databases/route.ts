@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { Pool } from "@neondatabase/serverless";
 import { getServerSession } from "next-auth/next";
 
@@ -8,7 +8,7 @@ const pool = new Pool({
 });
 
 // Fetch Notion databases for the authenticated user
-export async function GET(req: NextRequest) {
+export async function GET() {
   const session = await getServerSession();
   if (!session || !session.user?.email) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

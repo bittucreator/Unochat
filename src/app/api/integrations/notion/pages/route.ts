@@ -14,7 +14,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const body = await req.json();
-  let { message, databaseId } = body;
+  const { message, databaseId: databaseIdFromBody } = body;
+  let databaseId = databaseIdFromBody;
   if (!message) {
     return NextResponse.json({ error: "Missing message" }, { status: 400 });
   }

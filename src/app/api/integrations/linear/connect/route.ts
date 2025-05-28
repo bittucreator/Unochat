@@ -14,8 +14,6 @@ const LINEAR_REDIRECT_URI = process.env.LINEAR_REDIRECT_URI!;
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url!);
   const code = searchParams.get("code");
-  const state = searchParams.get("state");
-  // TODO: Validate state with session/cookie for CSRF protection
 
   if (!code) {
     // Step 1: Redirect to Linear OAuth
