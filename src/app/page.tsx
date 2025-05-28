@@ -5,8 +5,40 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Pencil, Trash2, RefreshCw, Mail, ListTodo, Languages, FileText, UserCircle, Copy } from 'lucide-react';
+import { Pencil, Trash2, RefreshCw, Mail, ListTodo, Languages, FileText, UserCircle, Copy, BookCopy, Settings, ExternalLink, Edit2, BadgeCheck } from 'lucide-react';
 import { useSession, signOut } from "next-auth/react";
+import Link from "next/link";
+
+// Add generic SVGs for Notion/Linear badges (move to top)
+const NotionIcon = () => (
+  <svg aria-hidden="true" style={{ width: 18, height: 18, display: 'block', fill: '#32302c', flexShrink: 0 }} viewBox="0 0 120 126"><path d="M20.693 21.932c3.89 3.16 5.35 2.92 12.656 2.432l68.879-4.136c1.461 0 .246-1.458-.241-1.7l-11.44-8.27c-2.191-1.701-5.111-3.65-10.708-3.162L13.143 11.96c-2.432.241-2.918 1.457-1.95 2.432zm4.135 16.052v72.472c0 3.895 1.947 5.352 6.327 5.111l75.698-4.38c4.383-.241 4.871-2.92 4.871-6.084V33.117c0-3.159-1.215-4.863-3.898-4.62l-79.105 4.62c-2.92.245-3.893 1.706-3.893 4.867m74.729 3.887c.485 2.191 0 4.38-2.195 4.626l-3.648.727v53.504c-3.166 1.702-6.087 2.675-8.52 2.675-3.896 0-4.871-1.217-7.79-4.863L53.547 61.087v36.237l7.55 1.704s0 4.375-6.091 4.375l-16.791.974c-.488-.974 0-3.404 1.703-3.891l4.382-1.214V51.36l-6.084-.487c-.488-2.191.727-5.35 4.137-5.596l18.013-1.214 24.828 37.94V48.44l-6.33-.726c-.486-2.679 1.459-4.624 3.893-4.865zM7.543 5.394 76.918.285c8.519-.73 10.71-.241 16.065 3.649l22.145 15.564c3.654 2.677 4.872 3.405 4.872 6.323v85.366c0 5.35-1.949 8.514-8.763 8.998l-80.564 4.865c-5.115.244-7.549-.485-10.228-3.892L4.137 99.999C1.215 96.105 0 93.191 0 89.782V13.903c0-4.375 1.95-8.025 7.543-8.509"/></svg>
+);
+const LinearIcon = () => (
+  <svg width="20" height="20" fill="currentColor" aria-label="Linear" color="currentColor" viewBox="0 0 100 100"><path d="M1.225 61.523c-.222-.949.908-1.546 1.597-.857l36.512 36.512c.69.69.092 1.82-.857 1.597-18.425-4.323-32.93-18.827-37.252-37.252M.002 46.889a1 1 0 0 0 .29.76L52.35 99.71c.201.2.478.307.76.29 2.37-.149 4.695-.46 6.963-.927.765-.157 1.03-1.096.478-1.648L2.576 39.448c-.552-.551-1.491-.286-1.648.479a50 50 0 0 0-.926 6.962M4.21 29.705a.99.99 0 0 0 .208 1.1l64.776 64.776c.289.29.726.375 1.1.208a50 50 0 0 0 5.185-2.684.98.98 0 0 0 .183-1.54L8.436 24.336a.98.98 0 0 0-1.541.183 50 50 0 0 0-2.684 5.185m8.448-11.631a.986.986 0 0 1-.045-1.354C21.78 6.46 35.111 0 49.952 0 77.592 0 100 22.407 100 50.048c0 14.84-6.46 28.172-16.72 37.338a.986.986 0 0 1-1.354-.045z"/></svg>
+);
+
+// --- Types ---
+type CreatedItem = {
+  id: string;
+  type: 'notion' | 'linear';
+  url: string;
+  title: string;
+  content: string;
+  createdAt: string;
+  chatId: string;
+};
+
+// Integration-specific templates (fix icon usage)
+const integrationTemplates: Record<string, { label: string; value: string; icon: React.ReactNode }[]> = {
+  notion: [
+    { label: 'Create a Notion meeting note', value: 'Create a Notion meeting note for our last team sync.', icon: <NotionIcon /> },
+    { label: 'Create a Notion project plan', value: 'Draft a Notion project plan for the new feature.', icon: <NotionIcon /> },
+  ],
+  linear: [
+    { label: 'Create a Linear bug report', value: 'Create a Linear bug report: The app crashes on login.', icon: <LinearIcon /> },
+    { label: 'Create a Linear feature request', value: 'Create a Linear feature request: Add dark mode support.', icon: <LinearIcon /> },
+  ],
+};
 
 const EXAMPLES = [
   "Summarize this text...",
@@ -40,6 +72,37 @@ export default function Home() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [showCopied, setShowCopied] = useState(false);
 
+  // Add state for Notion sending
+  const [notionLoading, setNotionLoading] = useState(false);
+  const [notionSuccess, setNotionSuccess] = useState(false);
+  const [notionError, setNotionError] = useState("");
+
+  // --- Integrations Dropdown State ---
+  const [integrationsList, setIntegrationsList] = useState<{ key: string; name: string }[]>([]);
+  const [selectedIntegration, setSelectedIntegration] = useState<string>("notion");
+  const [notionConnected, setNotionConnected] = useState(false);
+  const [linearConnected, setLinearConnected] = useState(false);
+  const [linearLoading, setLinearLoading] = useState(false);
+  const historyButtonRef = useRef<HTMLButtonElement>(null);
+  const editModalRef = useRef<HTMLDivElement>(null);
+  const historyModalRef = useRef<HTMLDivElement>(null);
+
+  // Add state for created items and toasts
+  const [createdItem, setCreatedItem] = useState<{ url: string; type: 'notion' | 'linear'; label: string } | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
+  const [createdItems, setCreatedItems] = useState<CreatedItem[]>([]);
+  const [editItem, setEditItem] = useState<CreatedItem | null>(null);
+  const [editContent, setEditContent] = useState('');
+  const [editLoading, setEditLoading] = useState(false);
+  const [autoSync, setAutoSync] = useState(false);
+  const [statusToast, setStatusToast] = useState<null | { type: 'notion' | 'linear'; url: string; title: string }>(null);
+  const [statusToastCopied, setStatusToastCopied] = useState(false);
+
+  // --- Integration badge logic: only show badge for the message that created the item ---
+  function getCreatedItemForMessage(msg: MessageItem, idx: number) {
+    return createdItems.find((ci: CreatedItem) => ci.chatId === (selectedConversationId || '') && (msg.content.includes(ci.url) || msg.content === ci.content));
+  }
+
   // Only load conversations if authenticated
   useEffect(() => {
     if (session && session.user) {
@@ -50,6 +113,33 @@ export default function Home() {
         })
         .then((data) => setConversations(data));
     }
+  }, [session]);
+
+  // Fetch connected integrations for dropdown
+  useEffect(() => {
+    if (!session || !session.user) return;
+    fetch("/api/integrations/status")
+      .then(async (res) => {
+        if (!res.ok) return [];
+        try {
+          return await res.json();
+        } catch {
+          return [];
+        }
+      })
+      .then((data) => {
+        if (data && Array.isArray(data)) {
+          setIntegrationsList(
+            data.filter((d: any) => d.connected).map((d: any) => ({ key: d.key, name: d.key.charAt(0).toUpperCase() + d.key.slice(1) }))
+          );
+          setNotionConnected(!!data.find((d: any) => d.key === 'notion' && d.connected));
+          setLinearConnected(!!data.find((d: any) => d.key === 'linear' && d.connected));
+          // Default to first connected integration
+          if (data.filter((d: any) => d.connected).length > 0) {
+            setSelectedIntegration(data.filter((d: any) => d.connected)[0].key);
+          }
+        }
+      });
   }, [session]);
 
   function handleSelectConversation(id: string) {
@@ -144,15 +234,31 @@ export default function Home() {
       const aiPromise = fetch("/api/ai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: [...allMsgs, { role: 'user', content: input }] }),
-      }).then((res): Promise<{ result?: string; error?: string }> => res.json());
-      const timeoutPromise = new Promise<{ result?: string; error?: string }>((_, reject) =>
+        body: JSON.stringify({ messages: [...allMsgs, { role: 'user', content: input }], selectedIntegration }),
+      }).then((res) => res.json());
+      const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error("AI response timed out. Please try again.")), 20000)
       );
-      const data: { result?: string; error?: string } = await Promise.race([aiPromise, timeoutPromise]);
+      const data = await Promise.race([aiPromise, timeoutPromise]);
       if (data.result) {
         // Save assistant message
-        const agentMsg = { chatId, role: 'assistant', content: data.result };
+        const cleaned = cleanAIResponse(data.result);
+        let extraContent = null;
+        let badgeType: 'notion' | 'linear' | null = null;
+        let badgeUrl: string | null = null;
+        let badgeLabel: string | null = null;
+        if (selectedIntegration === 'notion' && data.notionPageCreated && data.notionPageUrl) {
+          extraContent = `\n\n[View created Notion page](${data.notionPageUrl})`;
+          badgeType = 'notion';
+          badgeUrl = data.notionPageUrl;
+          badgeLabel = 'Notion Page';
+        } else if (selectedIntegration === 'linear' && data.linearIssueCreated && data.linearIssueUrl) {
+          extraContent = `\n\n[View created Linear issue](${data.linearIssueUrl})`;
+          badgeType = 'linear';
+          badgeUrl = data.linearIssueUrl;
+          badgeLabel = 'Linear Issue';
+        }
+        const agentMsg = { chatId, role: 'assistant', content: cleaned + (extraContent || "") };
         await fetch('/api/messages', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -163,6 +269,19 @@ export default function Home() {
         let updatedMsgs: MessageItem[] = await updatedMsgsRes.json();
         if (!Array.isArray(updatedMsgs)) updatedMsgs = [];
         setMessages((updatedMsgs || []).map((m) => ({ role: m.role, content: m.content, createdAt: m.createdAt })));
+        // Show toast and add to history if created
+        if (badgeType && badgeUrl) {
+          setCreatedItem({ url: badgeUrl, type: badgeType, label: badgeLabel! });
+          setCreatedItems(prev => [{
+            id: `${badgeType}-${Date.now()}`, // fallback id if not available
+            type: badgeType as 'notion' | 'linear',
+            url: badgeUrl!,
+            title: badgeLabel || '',
+            content: '',
+            createdAt: new Date().toISOString(),
+            chatId: chatId || '',
+          }, ...prev]);
+        }
       } else if (data.error) {
         setError(data.error);
       }
@@ -224,6 +343,137 @@ export default function Home() {
       handleSend();
     }
   }
+
+  // --- Integration Handlers ---
+  async function handleSendToLinear(target: { content: string }) {
+    try {
+      const res = await fetch("/api/integrations/linear/issues", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: target.content })
+      });
+      if (!res.ok) throw new Error("Failed to send to Linear.");
+      const data = await res.json();
+      setStatusToast({ type: 'linear', url: data.url, title: data.title || 'Linear Issue' });
+      setCreatedItems(prev => [{
+        id: data.id,
+        type: 'linear',
+        url: data.url,
+        title: data.title || 'Linear Issue',
+        content: target.content,
+        createdAt: new Date().toISOString(),
+        chatId: selectedConversationId || '',
+      }, ...prev]);
+    } catch (e) {
+      setError((e as Error).message || "Failed to send to Linear.");
+    }
+  }
+
+  async function handleSendToNotion(target: { content: string }) {
+    setNotionLoading(true);
+    setNotionSuccess(false);
+    setNotionError("");
+    try {
+      const res = await fetch("/api/integrations/notion/pages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: target.content })
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        setNotionError(err?.error?.message || err?.error || "Failed to send to Notion.");
+      } else {
+        const data = await res.json();
+        setNotionSuccess(true);
+        setStatusToast({ type: 'notion', url: data.url, title: data.title || 'Notion Page' });
+        setCreatedItems(prev => [{
+          id: data.id,
+          type: 'notion',
+          url: data.url,
+          title: data.title || 'Notion Page',
+          content: target.content,
+          createdAt: new Date().toISOString(),
+          chatId: selectedConversationId || '',
+        }, ...prev]);
+        setTimeout(() => setNotionSuccess(false), 1500);
+      }
+    } catch (e) {
+      setNotionError((e as Error).message || "Failed to send to Notion.");
+    } finally {
+      setNotionLoading(false);
+    }
+  }
+
+  function handleCopyLink(url: string) {
+    if (navigator && navigator.clipboard) {
+      navigator.clipboard.writeText(url);
+      setStatusToastCopied(true);
+      setTimeout(() => setStatusToastCopied(false), 1200);
+    }
+  }
+
+  function handleEditItem(item: CreatedItem) {
+    setEditItem(item);
+    setEditContent(item.content);
+  }
+
+  function handleCloseEdit() {
+    setEditItem(null);
+    setEditContent('');
+  }
+
+  async function handleSaveEdit() {
+    if (!editItem) return;
+    setEditLoading(true);
+    try {
+      if (editItem.type === 'notion') {
+        await fetch(`/api/integrations/notion/pages`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: editItem.id, content: editContent })
+        });
+      } else if (editItem.type === 'linear') {
+        await fetch(`/api/integrations/linear/issues`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: editItem.id, content: editContent })
+        });
+      }
+      setCreatedItems(prev => prev.map(ci => ci.id === editItem.id ? { ...ci, content: editContent } : ci));
+      handleCloseEdit();
+    } catch (e) {
+      setError((e as Error).message || 'Failed to update item.');
+    } finally {
+      setEditLoading(false);
+    }
+  }
+
+  // Cleans AI responses to remove Notion access disclaimers and code/manual steps
+  function cleanAIResponse(response: string): string {
+    return response
+      .replace(/If you want me to do it directly[\s\S]*?(Using Notion API|Manual steps):[\s\S]*/gi, '')
+      .replace(/I don’t have access to your Notion workspace[\s\S]*?(Using Notion API|Manual steps):[\s\S]*/gi, '')
+      .replace(/I don't have access to your Notion workspace[\s\S]*/gi, '')
+      .replace(/If you want to automate it and have a Notion integration and token:[\s\S]*/gi, '')
+      .replace(/Here is a Python example using the Notion API:[\s\S]*/gi, '')
+      .replace(/Manual steps:[\s\S]*/gi, '')
+      .replace(/Using Notion API:[\s\S]*/gi, '')
+      .trim();
+  }
+
+  // --- Auto-sync chat summaries ---
+  useEffect(() => {
+    if (!autoSync || !messages.length || !selectedConversationId) return;
+    // Only sync at end of conversation (last message is assistant)
+    if (messages[messages.length - 1].role === 'assistant') {
+      const summary = messages.map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`).join('\n');
+      if (selectedIntegration === 'notion') {
+        handleSendToNotion({ content: `Chat summary:\n${summary}` });
+      } else if (selectedIntegration === 'linear') {
+        handleSendToLinear({ content: `Chat summary:\n${summary}` });
+      }
+    }
+  }, [autoSync, messages, selectedIntegration, selectedConversationId]);
 
   // Block UI for unauthenticated users
   if (status === "loading") {
@@ -290,6 +540,12 @@ export default function Home() {
             </div>
           ))}
         </div>
+        {/* Settings link */}
+        <Link href="/settings">
+          <Button variant="outline" size="sm" className="w-full mb-4" asChild>
+            <span>⚙️ Settings</span>
+          </Button>
+        </Link>
         <div className="mt-auto pt-4 border-t border-border flex flex-col items-center">
           {session && session.user ? (
             <div className="w-full flex flex-col items-center gap-2 mb-2">
@@ -318,12 +574,6 @@ export default function Home() {
             {messages.length === 0 && (
               <>
                 <div className="text-muted-foreground text-center mt-12 mb-4 text-lg">👋 <b>Welcome to your AI Agent!</b></div>
-                <div className="text-center text-base mb-2">Try one of these examples:</div>
-                <div className="flex flex-wrap gap-2 justify-center mb-8">
-                  {EXAMPLES.map((ex, i) => (
-                    <button key={i} className="px-3 py-1 rounded bg-gray-100 dark:bg-gray-800 text-sm font-geist-mono hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors border border-border" onClick={() => handleExampleClick(ex)}>{ex}</button>
-                  ))}
-                </div>
               </>
             )}
             {messages.map((msg, i) => (
@@ -348,12 +598,19 @@ export default function Home() {
                   <div className="text-[10px] text-right text-muted-foreground mt-1">
                     {msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString() : ''}
                   </div>
+                  {/* Integration badge if this message created a Notion/Linear item */}
+                  {(() => { const ci = getCreatedItemForMessage(msg, i); return ci ? (
+                    <span className="absolute left-2 top-2" aria-label={ci.type === 'notion' ? 'Notion badge' : 'Linear badge'}>
+                      {ci.type === 'notion' ? <NotionIcon /> : <LinearIcon />}
+                    </span>
+                  ) : null; })()}
                   {/* Action icons for assistant responses */}
                   {msg.role === 'assistant' && (
                     <div className="flex gap-2 items-center absolute right-2 bottom-[-2.2rem]">
                       <button
-                        className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+                        className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition flex items-center"
                         title="Copy response"
+                        aria-label="Copy response"
                         onClick={() => {
                           if (navigator && navigator.clipboard) {
                             navigator.clipboard.writeText(msg.content);
@@ -364,10 +621,41 @@ export default function Home() {
                       >
                         <Copy className="h-4 w-4 text-gray-500" />
                       </button>
+                      {/* Notion icon button (before Linear) */}
+                      {notionConnected && (
+                        <button
+                          className="p-1 rounded hover:bg-green-100 dark:hover:bg-green-900 transition flex items-center"
+                          title="Send to Notion"
+                          aria-label="Send to Notion"
+                          onClick={() => handleSendToNotion({ content: msg.content })}
+                          disabled={notionLoading}
+                          style={notionLoading ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
+                        >
+                          <NotionIcon />
+                        </button>
+                      )}
+                      {/* Linear icon button (after Notion) */}
+                      {linearConnected && (
+                        <button
+                          className="p-1 rounded hover:bg-purple-100 dark:hover:bg-purple-900 transition flex items-center"
+                          title="Send to Linear"
+                          aria-label="Send to Linear"
+                          onClick={async () => {
+                            setLinearLoading(true);
+                            await handleSendToLinear({ content: msg.content });
+                            setLinearLoading(false);
+                          }}
+                          disabled={linearLoading}
+                          style={linearLoading ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
+                        >
+                          {linearLoading ? <span className="inline-block w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" /> : <LinearIcon />}
+                        </button>
+                      )}
                       {i === messages.length - 1 && (
                         <button
                           className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition"
                           title="Regenerate response"
+                          aria-label="Regenerate response"
                           onClick={handleRegenerate}
                           disabled={regenerating || loading}
                         >
@@ -391,57 +679,51 @@ export default function Home() {
               </div>
             )}
           </div>
-          <div className="flex gap-2 items-center mb-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-xs"
-              onClick={() => handleExampleClick('Summarize this text: ...')}
-            >
-              <FileText className="w-4 h-4 mr-1 inline" /> Summarize
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-xs"
-              onClick={() => handleExampleClick('Write a short email about ...')}
-            >
-              <Mail className="w-4 h-4 mr-1 inline" /> Email
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-xs"
-              onClick={() => handleExampleClick('Translate to French: ...')}
-            >
-              <Languages className="w-4 h-4 mr-1 inline" /> Translate
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-xs"
-              onClick={() => handleExampleClick('Create a todo list for ...')}
-            >
-              <ListTodo className="w-4 h-4 mr-1 inline" /> Todo List
-            </Button>
-            {messages.length > 1 && messages[messages.length - 1].role === 'assistant' && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-xs text-blue-600"
-                onClick={handleRegenerate}
-                disabled={regenerating || loading}
-                title="Regenerate last response"
+          {/* Integrations Dropdown + Settings + Created Items History shortcut */}
+          {integrationsList.length > 0 && (
+            <div className="mb-4 flex items-center gap-2">
+              <label htmlFor="integration-select" className="text-sm font-medium">Integration:</label>
+              <select
+                id="integration-select"
+                className="border rounded px-2 py-1 text-sm"
+                value={selectedIntegration}
+                onChange={e => setSelectedIntegration(e.target.value)}
+                aria-label="Select integration"
               >
-                <RefreshCw className="w-4 h-4 mr-1 inline animate-spin-slow" /> Regenerate
+                {integrationsList.map((intg) => (
+                  <option key={intg.key} value={intg.key}>{intg.name}</option>
+                ))}
+              </select>
+              <Button size="icon" variant="ghost" onClick={() => window.location.href = '/settings'} title="Integration Settings" aria-label="Integration Settings">
+                <Settings className="w-4 h-4" />
               </Button>
-            )}
-          </div>
+              <button
+                ref={historyButtonRef}
+                className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+                title="Show created items history"
+                aria-label="Show created items history"
+                onClick={() => setShowHistory(true)}
+                style={{ marginLeft: 4 }}
+              >
+                <BadgeCheck className="w-5 h-5 text-blue-500" />
+              </button>
+            </div>
+          )}
+          {/* Integration-specific templates */}
+          {integrationTemplates[selectedIntegration] && (
+            <div className="flex gap-2 mb-2">
+              {integrationTemplates[selectedIntegration].map((tpl, idx) => (
+                <Button key={idx} variant="outline" size="sm" className="text-xs flex items-center gap-1" onClick={() => handleExampleClick(tpl.value)}>
+                  {tpl.icon}{tpl.label}
+                </Button>
+              ))}
+            </div>
+          )}
           <div className="flex gap-2 items-center">
             <Input
               ref={inputRef}
               className="flex-1 text-base font-geist-mono"
-              placeholder="Ask me anything, or give me a task…"
+              placeholder={selectedIntegration === 'notion' ? "Ask me anything, or give me a Notion task…" : selectedIntegration === 'linear' ? "Ask me anything, or give me a Linear task…" : "Ask me anything, or give me a task…"}
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleInputKeyDown}
@@ -460,21 +742,57 @@ export default function Home() {
           </div>
         </div>
       </main>
-      {error && (
-        <div className="fixed bottom-24 right-8 bg-red-600 text-white px-4 py-2 rounded shadow z-50" role="alert" aria-live="assertive">
-          <span className="font-semibold">Error:</span> {error}
-          <button
-            className="ml-4 text-white/80 hover:text-white underline text-sm"
-            onClick={() => setError("")}
-            aria-label="Dismiss error"
-          >
-            Dismiss
-          </button>
+      {/* Status Toast for Notion/Linear creation */}
+      {statusToast && (
+        <div id="status-toast" className="fixed bottom-24 right-8 bg-blue-700 text-white px-4 py-2 rounded shadow z-50 flex items-center gap-2 animate-fade-in" role="status">
+          {statusToast.type === 'notion' ? <NotionIcon /> : <LinearIcon />}
+          <span className="font-semibold">{statusToast.type === 'notion' ? 'Notion Page' : 'Linear Issue'} Created:</span>
+          <a href={statusToast.url} target="_blank" rel="noopener noreferrer" className="underline flex items-center gap-1"><ExternalLink className="w-4 h-4 inline" />Open</a>
+          <Button size="sm" variant="ghost" onClick={() => handleCopyLink(statusToast.url)}><Copy className="w-4 h-4" />Copy Link</Button>
+          <button className="ml-2 text-white/80 hover:text-white underline text-xs" onClick={() => setStatusToast(null)}>Dismiss</button>
         </div>
       )}
-      {showCopied && (
-        <div className="fixed bottom-8 right-8 bg-black text-white px-4 py-2 rounded shadow z-50 animate-fade-in" role="status">
-          Copied!
+      {statusToastCopied && (
+        <div className="fixed bottom-20 right-8 bg-black text-white px-4 py-2 rounded shadow z-50 animate-fade-in" role="status">
+          Link copied!
+        </div>
+      )}
+      {/* Created Items History Modal */}
+      {showHistory && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center" aria-modal="true" role="dialog">
+          <div ref={historyModalRef} className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-6 w-[420px] max-h-[80vh] overflow-y-auto relative">
+            <button className="absolute top-2 right-2 text-gray-500 hover:text-black dark:hover:text-white" onClick={() => setShowHistory(false)} aria-label="Close history">&times;</button>
+            <h2 className="text-lg font-bold mb-4 flex items-center gap-2"><BadgeCheck className="w-5 h-5" /> Created Items</h2>
+            {createdItems.length === 0 ? (
+              <div className="text-muted-foreground text-sm">No Notion pages or Linear issues created yet.</div>
+            ) : (
+              <ul className="space-y-3">
+                {createdItems.map(item => (
+                  <li key={item.id} className="flex items-center gap-2 border-b pb-2">
+                    {item.type === 'notion' ? <NotionIcon /> : <LinearIcon />}
+                    <a href={item.url} target="_blank" rel="noopener noreferrer" className="underline font-semibold flex-1 truncate">{item.title}</a>
+                    <Button size="icon" variant="ghost" onClick={() => handleCopyLink(item.url)} title="Copy Link" aria-label="Copy Link"><Copy className="w-4 h-4" /></Button>
+                    <Button size="icon" variant="ghost" onClick={() => handleEditItem(item)} title="Edit" aria-label="Edit"><Edit2 className="w-4 h-4" /></Button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
+      {/* Edit Modal */}
+      {editItem && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center" aria-modal="true" role="dialog">
+          <div ref={editModalRef} className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-6 w-[420px] relative">
+            <button className="absolute top-2 right-2 text-gray-500 hover:text-black dark:hover:text-white" onClick={handleCloseEdit} aria-label="Close edit">&times;</button>
+            <h2 className="text-lg font-bold mb-4 flex items-center gap-2">Edit {editItem.type === 'notion' ? 'Notion Page' : 'Linear Issue'}</h2>
+            <div className="mb-2"><a href={editItem.url} target="_blank" rel="noopener noreferrer" className="underline">Open in {editItem.type === 'notion' ? 'Notion' : 'Linear'}</a></div>
+            <textarea className="w-full border rounded p-2 mb-4 min-h-[100px]" value={editContent} onChange={e => setEditContent(e.target.value)} disabled={editLoading} aria-label="Edit content" />
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={handleCloseEdit} disabled={editLoading} aria-label="Cancel edit">Cancel</Button>
+              <Button onClick={handleSaveEdit} disabled={editLoading} aria-label="Save edit">Save</Button>
+            </div>
+          </div>
         </div>
       )}
     </div>
